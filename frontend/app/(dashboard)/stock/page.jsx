@@ -36,9 +36,6 @@ const StockPage = () => {
    const summaryData = useMemo(() => stocks?.summary, [stocks?.summary]);
    const paginationData = useMemo(() => stocks?.pagination, [stocks?.pagination]);
 
-   console.log("Loading stocks:", summaryData)
-   console.log("Pagination data:", paginationData)
-
    // console.log("Fetched stocks:", stocks)
    
    
