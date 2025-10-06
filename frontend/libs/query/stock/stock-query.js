@@ -15,11 +15,11 @@ export const useFetchStock = (filters) => {
 };
 
 // Fetch single stock item by ID
-export const useFetchStockById = (id) => {
+export const useFetchStockById = ({id , includeAnalytics=false, includeHistory=false}) => {
    return useQuery({
       queryKey: ["stock-by-id", id],
       queryFn: async () => {
-         const response = await api.get(`/stock/${id}`);
+         const response = await api.get(`/stock/${id}?includeAnalytics=${includeAnalytics}&includeHistory=${includeHistory}`);
          return response.data;
       },
       enabled: !!id, // Only run query if ID is provided

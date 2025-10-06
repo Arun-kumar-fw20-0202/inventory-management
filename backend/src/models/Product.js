@@ -54,9 +54,9 @@ const productSchema = new mongoose.Schema({
 });
 
 // Compound indexes
-productSchema.index({ orgNo: 1, sku: 1 }, { unique: true });
-productSchema.index({ orgNo: 1, status: 1 });
-productSchema.index({ orgNo: 1, category: 1 });
+// productSchema.index({ orgNo: 1, sku: 1 }, { unique: true });
+// productSchema.index({ orgNo: 1, status: 1 });
+// productSchema.index({ orgNo: 1, category: 1 });
 
 // Text search index
 productSchema.index({ name: 'text', sku: 'text', description: 'text' });

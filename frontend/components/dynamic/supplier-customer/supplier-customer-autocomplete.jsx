@@ -2,13 +2,13 @@
 import { useSupplierCustomers } from '@/libs/mutation/suppliser-customer/suppliser-customer-mutation-query'
 import { Autocomplete, AutocompleteItem} from '@heroui/autocomplete'
 import { Avatar } from '@heroui/avatar'
-import React from 'react'
+import React, { useEffect } from 'react'
 
-const SupplierCustomerAutocomplete = ({ onSelectChange={}, ...props }) => {
+const SupplierCustomerAutocomplete = ({ onSelectChange={},userData={}, type='supplier', ...props }) => {
    const [limit, setLimit] = React.useState(20)
    const [search, setSearch] = React.useState('')
 
-   const { data: supplier, isLoading: fetching, isRefetching } = useSupplierCustomers({ search, limit })
+   const { data: supplier, isLoading: fetching, isRefetching } = useSupplierCustomers({ search, limit, type: type })
 
    
    var debounderTimer;
@@ -18,6 +18,15 @@ const SupplierCustomerAutocomplete = ({ onSelectChange={}, ...props }) => {
          setSearch(e);
       }, 1000);
    }
+
+   // return the selected data into userData function
+   const handleSelect = (item) => {
+      if(item){
+         const selected = supplier?.data?.data?.find(s => s._id === item)
+         userData(selected)
+         onSelectChange(item)
+      }
+   }
    
    
    return (
@@ -25,13 +34,13 @@ const SupplierCustomerAutocomplete = ({ onSelectChange={}, ...props }) => {
          <Autocomplete
             {...props}
             isLoading={fetching || isRefetching}
-            aria-label="Select Warehouse"
+            aria-label="Select Supplier/Customer"
             defaultItems={supplier?.data?.data || []}
             popoverProps={{
                offset: 10,
             }}
             onInputChange={(e) => handleSearch(e)}
-            onSelectionChange={(item) => onSelectChange(item)}
+            onSelectionChange={(item) => handleSelect(item)}
          >
             {(item) => (
                <AutocompleteItem key={item?._id} textValue={item?.name}>

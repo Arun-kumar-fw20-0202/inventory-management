@@ -56,13 +56,13 @@ const buildStockFilter = (query, orgNo) => {
       filter.$or = [
          { productName: searchRegex },
          { sku: searchRegex },
-         { category: searchRegex },
+         // { category: searchRegex },
          { description: searchRegex },
-         { warehouse: searchRegex },
-         { location: searchRegex },
-         { supplier: searchRegex },
-         { barcode: searchRegex },
-         { tags: { $in: [searchRegex] } }
+         // { warehouse: searchRegex },
+         // { location: searchRegex },
+         // { supplier: searchRegex },
+         // { barcode: searchRegex },
+         // { tags: { $in: [searchRegex] } }
       ];
    }
 
@@ -1152,12 +1152,12 @@ const searchStockController = async (req, res) => {
                $or: [
                   { productName: { $regex: searchTerm.trim(), $options: 'i' } },
                   { sku: { $regex: searchTerm.trim(), $options: 'i' } },
-                  { category: { $regex: searchTerm.trim(), $options: 'i' } },
+                  // { category: { $regex: searchTerm.trim(), $options: 'i' } },
                   { description: { $regex: searchTerm.trim(), $options: 'i' } },
-                  { warehouse: { $regex: searchTerm.trim(), $options: 'i' } },
-                  { supplier: { $regex: searchTerm.trim(), $options: 'i' } },
-                  { barcode: { $regex: searchTerm.trim(), $options: 'i' } },
-                  { tags: { $in: [{ $regex: searchTerm.trim(), $options: 'i' }] } }
+                  // { warehouse: { $regex: searchTerm.trim(), $options: 'i' } },
+                  // { supplier: { $regex: searchTerm.trim(), $options: 'i' } },
+                  // { barcode: { $regex: searchTerm.trim(), $options: 'i' } },
+                  // { tags: { $in: [{ $regex: searchTerm.trim(), $options: 'i' }] } }
                ]
             }
          },
@@ -1176,11 +1176,11 @@ const searchStockController = async (req, res) => {
                      // Contains in productName
                      { $cond: [{ $regexMatch: { input: '$productName', regex: searchTerm, options: 'i' } }, 60, 0] },
                      // Contains in category
-                     { $cond: [{ $regexMatch: { input: '$category', regex: searchTerm, options: 'i' } }, 40, 0] },
+                     // { $cond: [{ $regexMatch: { input: '$category', regex: searchTerm, options: 'i' } }, 40, 0] },
                      // Contains in description
                      { $cond: [{ $regexMatch: { input: '$description', regex: searchTerm, options: 'i' } }, 30, 0] },
                      // Contains in other fields
-                     { $cond: [{ $regexMatch: { input: '$warehouse', regex: searchTerm, options: 'i' } }, 20, 0] }
+                     // { $cond: [{ $regexMatch: { input: '$warehouse', regex: searchTerm, options: 'i' } }, 20, 0] }
                   ]
                },
                isLowStock: { $lte: ['$quantity', '$lowStockThreshold'] },
@@ -1266,11 +1266,13 @@ const getLowStockAlertsController = async (req, res) => {
          {
             $addFields: {
                urgencyLevel: {
-                  $cond: [
-                     { $eq: ['$quantity', 0] }, 'critical',
-                     { $lte: ['$quantity', { $multiply: ['$lowStockThreshold', 0.5] }] }, 'high',
-                     'medium'
-                  ]
+                     $switch: {
+                        branches: [
+                           { case: { $eq: ['$quantity', 0] }, then: 'critical' },
+                           { case: { $lte: ['$quantity', { $multiply: ['$lowStockThreshold', 0.5] }] }, then: 'high' }
+                        ],
+                        default: 'medium'
+                     }
                },
                daysOfStock: {
                   $cond: [
@@ -1458,15 +1460,22 @@ const getStockAnalyticsController = async (req, res) => {
          }
       ]);
 
-      // Top valuable items
-      const topValueItems = await StockModal.find({
-         orgNo,
-         status: { $ne: 'archived' }
-      })
-      .select('productName sku quantity sellingPrice purchasePrice')
-      .sort({ $expr: { $multiply: ["$quantity", "$sellingPrice"] } })
-      .limit(10)
-      .lean();
+      // Top valuable items - compute total value and sort using aggregation
+      const topValueItems = await StockModal.aggregate([
+         { $match: { orgNo, status: { $ne: 'archived' } } },
+         {
+            $project: {
+               productName: 1,
+               sku: 1,
+               quantity: 1,
+               sellingPrice: 1,
+               purchasePrice: 1,
+               totalValue: { $multiply: ["$quantity", "$sellingPrice"] }
+            }
+         },
+         { $sort: { totalValue: -1 } },
+         { $limit: 10 }
+      ]);
 
       // Low stock alerts
       const lowStockAlerts = await StockModal.find({

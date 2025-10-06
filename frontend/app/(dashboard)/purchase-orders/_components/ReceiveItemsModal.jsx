@@ -20,11 +20,14 @@ const ReceiveItemsModal = ({ isOpen, onClose, order }) => {
 
   const receivePurchaseOrder = useReceivePurchaseOrder()
 
+  console.log('Receiving Items:', order)
+  // return 
+
   // Reset form when modal opens/closes or order changes
   useEffect(() => {
     if (isOpen && order) {
       const initialItems = {}
-      order.items?.forEach(item => {
+      order?.items?.forEach(item => {
         const maxReceivable = item.quantity - item.receivedQuantity
         if (maxReceivable > 0) {
           initialItems[item.productId._id] = ''
@@ -58,7 +61,7 @@ const ReceiveItemsModal = ({ isOpen, onClose, order }) => {
     let hasErrors = false
 
     Object.entries(receivingItems).forEach(([productId, quantity]) => {
-      const item = order.items.find(item => item.productId._id === productId)
+      const item = order?.items.find(item => item.productId._id === productId)
       const maxReceivable = item.quantity - item.receivedQuantity
       const numQuantity = parseInt(quantity) || 0
 
@@ -91,7 +94,7 @@ const ReceiveItemsModal = ({ isOpen, onClose, order }) => {
 
     try {
       await receivePurchaseOrder.mutateAsync({
-        id: order._id,
+        id: order?._id,
         receivedItems
       })
       onClose()
@@ -124,7 +127,7 @@ const ReceiveItemsModal = ({ isOpen, onClose, order }) => {
     <Modal 
       isOpen={isOpen} 
       onClose={onClose}
-      size="3xl"
+      size="5xl"
       scrollBehavior="inside"
     >
       <ModalContent>
@@ -133,8 +136,8 @@ const ReceiveItemsModal = ({ isOpen, onClose, order }) => {
             <Package className="w-6 h-6 text-primary" />
             <div>
               <h2 className="text-xl font-bold">Receive Items</h2>
-              <p className="text-sm text-gray-600">
-                Order: {order.orderNumber}
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Order: {order?.orderNumber}
               </p>
             </div>
           </div>
@@ -175,26 +178,28 @@ const ReceiveItemsModal = ({ isOpen, onClose, order }) => {
                         {/* Product Info */}
                         <div className="flex-1">
                           <h4 className="font-medium">{item.productId.name}</h4>
-                          <p className="text-sm text-gray-600">SKU: {item.productId.sku}</p>
+                          {/* <h4 className="font-medium">{item.productId._id}</h4> */}
+                          <p className="text-sm text-gray-600 dark:text-gray-300">SKU: {item.productId.sku}</p>
                           <div className="flex gap-4 mt-2 text-sm">
-                            <span className="text-gray-600">
+                            <span className="text-gray-600 dark:text-gray-300">
                               Ordered: <span className="font-medium">{item.quantity}</span>
                             </span>
-                            <span className="text-gray-600">
+                            <span className="text-gray-600 dark:text-gray-300">
                               Received: <span className="font-medium">{item.receivedQuantity}</span>
                             </span>
-                            <span className="text-gray-600">
+                            <span className="text-gray-600 dark:text-gray-300">
                               Remaining: <span className="font-medium text-orange-600">{maxReceivable}</span>
                             </span>
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            Unit Price: {formatCurrency(item.unitPrice)}
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                            Unit Price: {formatCurrency(item.unitPrice, "INR")}
                           </p>
                         </div>
 
                         {/* Receiving Input */}
                         <div className="w-full md:w-48">
                           <Input
+                            variant='bordered'
                             type="number"
                             label="Receiving Quantity"
                             placeholder="0"
@@ -207,7 +212,7 @@ const ReceiveItemsModal = ({ isOpen, onClose, order }) => {
                             description={`Max: ${maxReceivable}`}
                           />
                           {receivingItems[productId] && parseInt(receivingItems[productId]) > 0 && (
-                            <p className="text-xs text-gray-600 mt-1">
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
                               Value: {formatCurrency(parseInt(receivingItems[productId]) * item.unitPrice)}
                             </p>
                           )}
@@ -225,12 +230,12 @@ const ReceiveItemsModal = ({ isOpen, onClose, order }) => {
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="font-medium">Total Receiving Value</p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
                           {Object.values(receivingItems).filter(q => q && parseInt(q) > 0).length} items
                         </p>
                       </div>
                       <p className="text-2xl font-bold text-primary">
-                        {formatCurrency(getTotalReceivingValue())}
+                        {formatCurrency(getTotalReceivingValue(), "INR")}
                       </p>
                     </div>
                   </CardBody>

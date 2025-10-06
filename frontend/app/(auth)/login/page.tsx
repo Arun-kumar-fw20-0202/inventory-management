@@ -1,6 +1,5 @@
 // @ts-nocheck
 'use client'
-import { MailIcon } from "@/components/icons";
 import { UseAuthLogin } from "@/libs/mutation/auth/use-login";
 
  import { Button } from "@heroui/button";
@@ -13,6 +12,7 @@ import { UseAuthLogin } from "@/libs/mutation/auth/use-login";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { MailIcon } from "lucide-react";
  
  export default function Index() {
   const [showPassword, setShowPassword] = useState(false);

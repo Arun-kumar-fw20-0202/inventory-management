@@ -5,18 +5,11 @@ import { Button } from '@heroui/button'
 import { BookOpen, Plus } from 'lucide-react'
 import PurchaseOrdersSummary from './_components/PurchaseOrdersSummary'
 import PurchaseOrdersTable from './_components/PurchaseOrdersTable'
-import CreatePurchaseOrderModal from './_components/CreatePurchaseOrderModal'
-// import { useFetchSuppliers } from '@/libs/query/suppliers/suppliers-query'
-// import { useFetchWarehouses } from '@/libs/query/warehouses/warehouses-query'
-// import { useFetchProducts } from '@/libs/query/products/products-query'
+import { useRouter } from 'next/navigation'
 
 const PurchaseOrdersPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-
-  // Fetch data for dropdowns
-  const { data: suppliers = [], isLoading: suppliersLoading } = {}
-  const { data: warehouses = [], isLoading: warehousesLoading } = {}
-  const { data: products = [], isLoading: productsLoading } = {}
+  const router = useRouter()
 
   return (
     <PageAccess allowedRoles={['superadmin', 'admin', 'manager']}>
@@ -32,8 +25,9 @@ const PurchaseOrdersPage = () => {
           <Button 
             color="primary" 
             startContent={<Plus className="w-4 h-4" />}
-            onPress={() => setIsCreateModalOpen(true)}
-            isLoading={suppliersLoading || warehousesLoading || productsLoading}
+            onPress={() => router.push('/create-order')}
+            // onPress={() => setIsCreateModalOpen(true)}
+            // isLoading={suppliersLoading || warehousesLoading || productsLoading}
           >
             Create Purchase Order
           </Button>
@@ -46,13 +40,10 @@ const PurchaseOrdersPage = () => {
         <PurchaseOrdersTable />
 
         {/* Create Purchase Order Modal */}
-        <CreatePurchaseOrderModal
+        {/* <CreatePurchaseOrderModal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
-          suppliers={suppliers}
-          warehouses={warehouses}
-          products={products}
-        />
+        /> */}
       </div>
     </PageAccess>
   )

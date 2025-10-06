@@ -30,7 +30,7 @@ const validateItems = async (items) => {
    }
 
    const productIds = items.map(item => item.productId);
-   const products = await Product.find({ _id: { $in: productIds } }).lean();
+   const products = await StockModal.find({ _id: { $in: productIds } }).lean();
    
    if (products.length !== productIds.length) {
       throw new Error('One or more products not found');
@@ -58,7 +58,9 @@ const validateItems = async (items) => {
 const createPurchaseOrder = async (req, res) => {
    try {
       const { supplierId, warehouseId, items, expectedDeliveryDate, notes } = req.body;
-      const userId = req.user.id;
+      const userId = req.profile.id;
+
+      console.log('Create purchase order request body:', req.body);
 
       // Validate required fields
       if (!supplierId || !warehouseId || !items) {
@@ -94,6 +96,7 @@ const createPurchaseOrder = async (req, res) => {
          items: processedItems,
          expectedDeliveryDate,
          notes,
+         totalAmount: processedItems.reduce((sum, item) => sum + item.total, 0),
          createdBy: userId,
          status: 'Draft'
       });
@@ -156,7 +159,7 @@ const submitPurchaseOrder = async (req, res) => {
 const approvePurchaseOrder = async (req, res) => {
    try {
       const { id } = req.params;
-      const userId = req.user.id;
+      const userId = req.profile.id;
 
       if (!mongoose.Types.ObjectId.isValid(id)) {
          return error(res, 'Invalid purchase order ID', null, 400);
@@ -279,14 +282,15 @@ const receivePurchaseOrder = async (req, res) => {
                // Prepare stock update
                stockUpdates.push({
                   updateOne: {
+                     // Stock documents use _id for the stock record; use _id + warehouse to locate the record
                      filter: { 
-                        productId: receivedItem.productId, 
+                        _id: receivedItem.productId,
                         warehouse: purchaseOrder.warehouseId 
                      },
                      update: { 
                         $inc: { quantity: receivedItem.receivedQuantity } 
                      },
-                     upsert: true
+                     upsert: false
                   }
                });
             }
@@ -413,7 +417,7 @@ const getPurchaseOrderById = async (req, res) => {
          .populate('warehouseId', 'name location')
          .populate('createdBy', 'name email')
          .populate('approvedBy', 'name email')
-         .populate('items.productId', 'name sku description')
+         .populate('items.productId', 'productName sku description')
          .lean();
 
       if (!purchaseOrder) {

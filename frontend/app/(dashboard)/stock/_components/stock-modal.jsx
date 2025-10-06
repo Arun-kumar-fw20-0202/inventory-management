@@ -13,10 +13,11 @@ import { Input } from '@heroui/input'
 import { Select, SelectItem } from '@heroui/select'
 import { Textarea } from '@heroui/input'
 import { Chip } from '@heroui/chip'
-import { X } from 'lucide-react'
+import { IndianRupee, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CategoryAutocomplete from '@/components/dynamic/category/category-autocomplete'
 import WarehouseAutocomplete from '@/components/dynamic/warehouse/warehouse-autocomplete-'
+import { Drawer, DrawerBody, DrawerContent, DrawerHeader } from '@heroui/drawer'
 
 const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubmit }) => {
    const {
@@ -140,18 +141,18 @@ const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubm
    }
 
    return (
-      <Modal 
+      <Drawer 
          isOpen={isOpen} 
          onClose={onClose}
          size="2xl"
          scrollBehavior="inside"
       >
-         <ModalContent>
-               <ModalHeader>
+         <DrawerContent>
+               <DrawerHeader>
                   <h3 className="text-xl font-semibold">{mode === 'create' ? 'Add New Stock Item' : 'Edit Stock Item'}</h3>
-               </ModalHeader>
+               </DrawerHeader>
 
-               <ModalBody className="space-y-4">
+               <DrawerBody className="space-y-4">
                   <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
                      {/* Product Name */}
                      <Controller
@@ -203,11 +204,12 @@ const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubm
                            <>
                               {console.log(field.value)}
                               <CategoryAutocomplete 
-                                 defaultSelectedKey={new Set([field.value])}
                                  onSelectChange={(value) => setValue('category', value)}
                                  variant='bordered'
                                  label="Category"
                                  isRequired
+                                 defaultSelectedKey={field.value}
+                                 key={field.value} 
                                  placeholder="Select or type to search category"
                               />
                            </>
@@ -224,6 +226,8 @@ const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubm
                               <WarehouseAutocomplete 
                                  onSelectChange={(value) => setValue('warehouse', value)}
                                  variant='bordered'
+                                 defaultSelectedKey={field.value}
+                                 key={field.value} 
                                  label="Warehouse"
                                  isRequired
                                  placeholder="Select or type to search warehouse"
@@ -310,15 +314,15 @@ const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubm
                            render={({ field }) => (
                               <Input
                                  variant='bordered'
-                              {...field}
-                              type="number"
-                              step="0.01"
-                              label="Purchase Price"
-                              isRequired
-                              placeholder="0.00"
-                              startContent={<span className="text-default-400">$</span>}
-                              isInvalid={!!errors.purchasePrice}
-                              errorMessage={errors.purchasePrice?.message}
+                                 {...field}
+                                 type="number"
+                                 step="0.01"
+                                 label="Purchase Price"
+                                 isRequired
+                                 placeholder="0.00"
+                                 startContent={<span className="text-default-400"><IndianRupee size={16} /></span>}
+                                 isInvalid={!!errors.purchasePrice}
+                                 errorMessage={errors.purchasePrice?.message}
                               />
                            )}
                         />
@@ -333,15 +337,15 @@ const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubm
                            render={({ field }) => (
                               <Input
                                  variant='bordered'
-                              {...field}
-                              type="number"
-                              step="0.01"
-                              label="Selling Price"
-                              isRequired
-                              placeholder="0.00"
-                              startContent={<span className="text-default-400">$</span>}
-                              isInvalid={!!errors.sellingPrice}
-                              errorMessage={errors.sellingPrice?.message}
+                                 {...field}
+                                 type="number"
+                                 step="0.01"
+                                 label="Selling Price"
+                                 isRequired
+                                 placeholder="0.00"
+                                 startContent={<span className="text-default-400"><IndianRupee size={16} /></span>}
+                                 isInvalid={!!errors.sellingPrice}
+                                 errorMessage={errors.sellingPrice?.message}
                               />
                            )}
                         />
@@ -358,12 +362,12 @@ const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubm
                            render={({ field }) => (
                               <Input
                                  variant='bordered'
-                              {...field}
-                              type="number"
-                              label="Low Stock Threshold"
-                              placeholder="5"
-                              isInvalid={!!errors.lowStockThreshold}
-                              errorMessage={errors.lowStockThreshold?.message}
+                                 {...field}
+                                 type="number"
+                                 label="Low Stock Threshold"
+                                 placeholder="5"
+                                 isInvalid={!!errors.lowStockThreshold}
+                                 errorMessage={errors.lowStockThreshold?.message}
                               />
                            )}
                         />
@@ -374,7 +378,7 @@ const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubm
                            rules={{ required: 'Status is required' }}
                            render={({ field }) => (
                               <Select
-                              {...field}
+                                 {...field}
                                  variant='bordered'
                                  label="Status"
                                  isRequired
@@ -425,11 +429,11 @@ const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubm
                         <Button color="primary" type="submit" isLoading={isSubmitting}>{mode === 'create' ? 'Create Stock Item' : 'Update Stock Item'}</Button>
                      </div>
                   </form>
-               </ModalBody>
+               </DrawerBody>
 
                <ModalFooter></ModalFooter>
-         </ModalContent>
-      </Modal>
+         </DrawerContent>
+      </Drawer>
    )
 }
 

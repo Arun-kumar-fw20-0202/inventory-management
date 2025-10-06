@@ -5,10 +5,10 @@
 /**
  * Format currency values
  * @param {number} amount - The amount to format
- * @param {string} currency - Currency code (default: USD)
+ * @param {string} currency - Currency code (default: INDIA)
  * @returns {string} Formatted currency string
  */
-export const formatCurrency = (amount, currency = 'USD') => {
+export const formatCurrency = (amount, currency = 'INR') => {
   if (amount === null || amount === undefined || isNaN(amount)) {
     return '$0.00'
   }
@@ -16,9 +16,13 @@ export const formatCurrency = (amount, currency = 'USD') => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency,
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amount)
+}
+
+export const FixedOrPercentage = (ispercentage ) => {
+  return ispercentage == 'percentage' ? '%' : "₹"
 }
 
 /**

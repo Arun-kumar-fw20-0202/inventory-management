@@ -9,8 +9,10 @@ import { Button } from '@heroui/button'
 import { useAddStock, useUpdateStock } from '@/libs/mutation/stock/stock-mutation'
 import StockTable from './_components/stock-table'
 import { useFetchStock } from '@/libs/query/stock/stock-query'
+import { useRouter } from 'next/navigation'
 
 const StockPage = () => {
+   const router = useRouter()
    const [bulkSelection, setBulkSelection] = React.useState([]);
    
    const [filter, setFilter] = React.useState({
@@ -94,6 +96,11 @@ const StockPage = () => {
       }, 300) // Small delay to allow modal close animation
    }
    
+   const handleViewStockDetails = (stockData) => {
+      // For now, just alerting. Replace with actual view details logic.
+      router.push(`/stock/${stockData._id}`)
+   }
+   
    return (
       <PageAccess allowedRoles={['superadmin', 'admin', 'manager', 'staff']}>
          <StockModal
@@ -154,7 +161,7 @@ const StockPage = () => {
                         setBulkSelection={setBulkSelection}
                         onRefresh={handleRefresh}
                         onAddNew={handleCreateStock}
-                        // onViewDetails={handleViewStockDetails}
+                        onViewDetails={handleViewStockDetails}
                         // onDelete={handleDeleteStock}
                      />
                      

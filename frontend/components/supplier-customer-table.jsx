@@ -133,7 +133,7 @@ const SupplierCustomerCards = ({
                      <h4 className="font-semibold text-base line-clamp-1">
                         {item?.displayName || item?.name}
                      </h4>
-                     <p className="text-sm text-gray-500 line-clamp-1">{item?.email}</p>
+                     <p className="text-sm text-gray-500 dark:text-gray-300 line-clamp-1">{item?.email}</p>
                   </div>
                </div>
                <div className="flex items-center gap-2">
@@ -198,7 +198,7 @@ const SupplierCustomerCards = ({
          </CardHeader>
          <CardBody className="pt-0 space-y-4">
             {/* Contact Info */}
-            <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 dark:text-gray-300">
                <Phone className="w-4 h-4" />
                <span className="line-clamp-1">{item?.phone}</span>
             </div>
@@ -209,7 +209,7 @@ const SupplierCustomerCards = ({
                   <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
                   <div className="flex flex-col min-w-0">
                      <span className="font-medium line-clamp-1">{item?.address?.city}</span>
-                     <span className="text-gray-500 text-xs line-clamp-1">
+                     <span className="text-gray-500 dark:text-gray-300 text-xs line-clamp-1">
                         {item?.address?.state}, {item?.address?.country}
                      </span>
                   </div>
@@ -224,17 +224,17 @@ const SupplierCustomerCards = ({
                </div>
                <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="text-center">
-                     <div className="text-gray-500">Credit Limit</div>
+                     <div className="text-gray-500 dark:text-gray-300">Credit Limit</div>
                      <div className="font-semibold">{formatCurrency(item?.creditLimit)}</div>
                   </div>
                   <div className="text-center">
-                     <div className="text-gray-500">Balance</div>
+                     <div className="text-gray-500 dark:text-gray-300">Balance</div>
                      <div className={`font-semibold ${item?.currentBalance < 0 ? 'text-red-500' : 'text-green-500'}`}>
                         {formatCurrency(item?.currentBalance)}
                      </div>
                   </div>
                   <div className="text-center">
-                     <div className="text-gray-500">Total Trans.</div>
+                     <div className="text-gray-500 dark:text-gray-300">Total Trans.</div>
                      <div className="font-semibold">{formatCurrency(item?.totalTransactions)}</div>
                   </div>
                </div>
@@ -264,14 +264,14 @@ const SupplierCustomerCards = ({
             <div className="flex items-center justify-between text-sm">
                <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-600">Performance</span>
+                  <span className="text-gray-600 dark:text-gray-400">Performance</span>
                </div>
                <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1">
                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                      <span className="text-xs">{item?.rating || 0}/5</span>
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-300">
                      {item?.metrics?.totalOrders || 0} orders
                   </div>
                </div>
@@ -281,13 +281,13 @@ const SupplierCustomerCards = ({
             <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
                <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-600">Last Activity</span>
+                  <span className="text-gray-600 dark:text-gray-400">Last Activity</span>
                </div>
                <div className="text-right">
                   <div className="font-medium text-xs">
                      {formatDate(item?.lastTransactionDate)}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-300">
                      {formatDate(item?.updatedAt)}
                   </div>
                </div>
@@ -340,7 +340,7 @@ const SupplierCustomerCards = ({
 
          {/* Results Summary */}
          {data?.data && (
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-sm text-gray-600 gap-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-sm text-gray-600 dark:text-gray-400 gap-2">
                <span>
                   Showing {data.data.data.length} of {data.data.pagination.totalCount} contacts
                </span>
@@ -392,7 +392,7 @@ const SupplierCustomerCards = ({
                   <Search className="w-12 h-12 mx-auto mb-4" />
                </div>
                <h3 className="text-lg font-medium text-gray-900 mb-2">No contacts found</h3>
-               <p className="text-gray-500">Try adjusting your search or filter criteria</p>
+               <p className="text-gray-500 dark:text-gray-300">Try adjusting your search or filter criteria</p>
             </div>
          )}
 

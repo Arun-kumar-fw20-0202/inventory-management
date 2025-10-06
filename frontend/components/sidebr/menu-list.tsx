@@ -27,7 +27,7 @@ export function getMenuList(role) {
       icon: BarChart3,
       menues: [
         { name: "New Sale", path: "/sales/new", icon: BarChart3 },
-        { name: "All Transactions", path: "/sales/all", icon: Inbox },
+        { name: "All Sales", path: "/sales/all", icon: Inbox },
       ],
       visible: isVisibleForRole([ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
       isBeta: false,

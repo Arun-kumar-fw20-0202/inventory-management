@@ -48,7 +48,7 @@ const SuppliersPage = () => {
             <User className="w-8 h-8 text-primary" />
             <div>
               <h1 className="text-3xl font-bold">Suppliers</h1>
-              <p className="text-gray-600">Manage your suppliers and vendors</p>
+              <p className="text-gray-600 dark:text-gray-400">Manage your suppliers and vendors</p>
             </div>
           </div>
           <Button 
@@ -69,7 +69,7 @@ const SuppliersPage = () => {
                   <h3 className="text-2xl font-bold text-blue-600">
                     {analyticsLoading ? '...' : analyticsData.totalContacts || 0}
                   </h3>
-                  <p className="text-gray-600">Total Suppliers</p>
+                  <p className="text-gray-600 dark:text-gray-400">Total Suppliers</p>
                 </div>
                 <User className="w-8 h-8 text-blue-500" />
               </div>
@@ -83,7 +83,7 @@ const SuppliersPage = () => {
                   <h3 className="text-2xl font-bold text-green-600">
                     {analyticsLoading ? '...' : analyticsData.activeContacts || 0}
                   </h3>
-                  <p className="text-gray-600">Active Suppliers</p>
+                  <p className="text-gray-600 dark:text-gray-400">Active Suppliers</p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-green-500" />
               </div>
@@ -97,7 +97,7 @@ const SuppliersPage = () => {
                   <h3 className="text-2xl font-bold text-orange-600">
                     ${analyticsLoading ? '...' : new Intl.NumberFormat().format(analyticsData.totalPurchases || 0)}
                   </h3>
-                  <p className="text-gray-600">Total Purchases</p>
+                  <p className="text-gray-600 dark:text-gray-400">Total Purchases</p>
                 </div>
                 <TrendingDown className="w-8 h-8 text-orange-500" />
               </div>
@@ -111,7 +111,7 @@ const SuppliersPage = () => {
                   <h3 className="text-2xl font-bold text-purple-600">
                     {analyticsLoading ? '...' : (analyticsData.averageRating || 0).toFixed(1)}
                   </h3>
-                  <p className="text-gray-600">Avg Rating</p>
+                  <p className="text-gray-600 dark:text-gray-400">Avg Rating</p>
                 </div>
                 <Star className="w-8 h-8 text-purple-500" />
               </div>

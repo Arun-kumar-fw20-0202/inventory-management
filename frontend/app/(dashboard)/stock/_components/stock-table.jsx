@@ -43,33 +43,33 @@ const StockTable = ({
       switch (columnKey) {
          case "productName":
             return (
-               <div className="flex flex-col">
+               <div className="flex flex-col text-nowrap">
                   <p className="text-bold text-sm capitalize">{item.productName}</p>
-                  <p className="text-bold text-xs capitalize ">{item.description || "No description"}</p>
+                  <p className="text-bold text-xs capitalize text-gray-600 dark:text-gray-400 ">{item.description.substring(0, 30) || "No description"} {item?.description.length > 30 ? "..." : ""}</p>
                </div>
             );
          case "sku":
             return (
-               <div className="flex flex-col">
+               <div className="flex flex-col text-nowrap">
                   <p className="text-bold text-sm">{item.sku}</p>
                </div>
             );
          case "category":
             return (
-               <div className="flex flex-col">
+               <div className="flex flex-col text-nowrap">
                   <p className="text-bold text-sm capitalize">{item?.category?.name}</p>
                </div>
             );
          case "warehouse":
             return (
-               <div className="flex flex-col">
+               <div className="flex flex-col text-nowrap">
                   <p className="text-bold text-sm capitalize">{item?.warehouse?.name}</p>
-                  {item?.warehouse?.location && <p className="text-xs">{item?.warehouse?.location}</p>}
+                  {item?.warehouse?.location && <p className="text-xs text-gray-600 dark:text-gray-400">{item?.warehouse?.location}</p>}
                </div>
             );
          case "quantity":
             return (
-               <div className="flex flex-col">
+               <div className="flex flex-col text-nowrap">
                   <p className={`text-bold text-sm ${item.isLowStock ? 'text-danger' : 'text-success'}`}>
                      {item.quantity}
                   </p>
@@ -84,17 +84,17 @@ const StockTable = ({
             );
          case "sellingPrice":
             return (
-               <div className="flex flex-col">
-                  <p className="text-bold text-sm">₹{item.sellingPrice?.toFixed(2)}</p>
-                  <p className="text-xs">Cost: ₹{item.purchasePrice?.toFixed(2)}</p>
+               <div className="flex flex-col text-nowrap">
+                  <p className="text-bold text-sm">₹{item.sellingPrice}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Cost: ₹{item.purchasePrice}</p>
                </div>
             );
          case "totalValue":
             return (
-               <div className="flex flex-col">
-                  <p className="text-bold text-sm text-success">₹{item.totalValue?.toFixed(2)}</p>
-                  <p className="text-xs">
-                     Profit: ₹{((item.sellingPrice - item.purchasePrice) * item.quantity)?.toFixed(2)}
+               <div className="flex flex-col text-nowrap">
+                  <p className="text-bold text-sm text-success">₹{item.totalValue}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                     Profit: ₹{((item.sellingPrice - item.purchasePrice) * item.quantity)}
                   </p>
                </div>
             );
@@ -149,11 +149,12 @@ const StockTable = ({
    
    return (
       <>
-         <Card className="shadow-none border border-default-200">
+         <Card className="shadow-none">
             <Table
                aria-label="Enhanced stock table"
                isHeaderSticky
                isStriped
+               shadow='none'
                selectionMode="multiple"
                onSelectionChange={setBulkSelection}
                topContent={

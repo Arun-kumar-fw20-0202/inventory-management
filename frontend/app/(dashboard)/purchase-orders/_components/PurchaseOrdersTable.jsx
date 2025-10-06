@@ -263,7 +263,7 @@ const PurchaseOrdersTable = () => {
           ) : (
             <>
               {/* Desktop Table */}
-              <div className="hidden md:block overflow-x-auto">
+              {/* <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
@@ -301,7 +301,7 @@ const PurchaseOrdersTable = () => {
                             : 'Not set'
                           }
                         </td>
-                        <td className="py-3 px-4 text-gray-600">
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
                           {formatDate(order.createdAt)}
                         </td>
                         <td className="py-3 px-4">
@@ -313,32 +313,32 @@ const PurchaseOrdersTable = () => {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </div> */}
 
               {/* Mobile Cards */}
-              <div className="md:hidden space-y-4">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {orders.map((order) => (
-                  <Card key={order._id} className="shadow-sm">
+                  <Card key={order._id} className="border dark:border-gray-700">
                     <CardBody className="p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           <p className="font-medium text-primary">{order.orderNumber}</p>
-                          <p className="text-sm text-gray-600">{order.supplierId?.name}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{order.supplierId?.name}</p>
                         </div>
                         <PurchaseOrderStatusBadge status={order.status} />
                       </div>
                       
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Warehouse:</span>
+                          <span className="text-gray-600 dark:text-gray-400">Warehouse:</span>
                           <span>{order.warehouseId?.name}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Amount:</span>
-                          <span className="font-medium">{formatCurrency(order.totalAmount)}</span>
+                          <span className="text-gray-600 dark:text-gray-400">Amount:</span>
+                          <span className="font-medium">{formatCurrency(order.totalAmount, 'INR')}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Expected:</span>
+                          <span className="text-gray-600 dark:text-gray-400">Expected:</span>
                           <span>
                             {order.expectedDeliveryDate 
                               ? formatDate(order.expectedDeliveryDate)
@@ -359,7 +359,7 @@ const PurchaseOrdersTable = () => {
               {/* Pagination */}
               {pagination && pagination.totalPages > 1 && (
                 <div className="flex justify-between items-center mt-6">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     Showing {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} to {' '}
                     {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of {' '}
                     {pagination.totalItems} results

@@ -4,7 +4,7 @@ import { Autocomplete, AutocompleteItem} from '@heroui/autocomplete'
 import { Avatar } from '@heroui/avatar'
 import React from 'react'
 
-const WarehouseAutocomplete = ({ onSelectChange={}, ...props }) => {
+const WarehouseAutocomplete = ({ onSelectChange={} , ...props }) => {
    const [limit, setLimit] = React.useState(20)
    const [search, setSearch] = React.useState('')
 
@@ -30,6 +30,8 @@ const WarehouseAutocomplete = ({ onSelectChange={}, ...props }) => {
             popoverProps={{
                offset: 10,
             }}
+            emptyState="No warehouses"
+            loadingState="Loading warehouses..."
             onInputChange={(e) => handleSearch(e)}
             onSelectionChange={(item) => onSelectChange(item)}
          >

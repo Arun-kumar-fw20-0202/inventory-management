@@ -35,7 +35,7 @@ const StockAutocomplete = ({ onSelectChange={}, ...props }) => {
             onSelectionChange={(item) => onSelectChange(item)}
          >
             {(item) => (
-               <AutocompleteItem key={item?._id} textValue={item?.name}>
+               <AutocompleteItem key={item?._id} textValue={item?.productName}>
                   <div className="flex justify-between items-center">
                      <div className="flex gap-2 items-center">
                         <Avatar alt={item?.name} className="flex-shrink-0" size="sm" color='primary' src={item?.avatar} />

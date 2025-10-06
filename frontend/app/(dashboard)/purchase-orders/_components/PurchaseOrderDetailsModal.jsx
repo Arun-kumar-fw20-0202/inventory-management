@@ -31,6 +31,7 @@ import {
 import PurchaseOrderStatusBadge from './PurchaseOrderStatusBadge'
 import ReceiveItemsModal from './ReceiveItemsModal'
 import { formatCurrency, formatDate } from '@/libs/utils'
+import { Drawer, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader } from '@heroui/drawer'
 
 const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
   const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false)
@@ -48,6 +49,7 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
   const rejectPurchaseOrder = useRejectPurchaseOrder()
 
   const order = orderResponse?.data
+
 
   const handleSubmitOrder = async () => {
     try {
@@ -85,7 +87,7 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
 
     const buttons = []
 
-    if (order.status === 'Draft') {
+    if (order?.status === 'Draft') {
       buttons.push(
         <Button
           key="submit"
@@ -98,7 +100,7 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
       )
     }
 
-    if (order.status === 'PendingApproval') {
+    if (order?.status === 'PendingApproval') {
       buttons.push(
         <Button
           key="approve"
@@ -122,7 +124,7 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
       )
     }
 
-    if (order.status === 'Approved' || order.status === 'PartiallyReceived') {
+    if (order?.status === 'Approved' || order?.status === 'PartiallyReceived') {
       buttons.push(
         <Button
           key="receive"
@@ -146,14 +148,14 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
 
   return (
     <>
-      <Modal 
+      <Drawer 
         isOpen={isOpen} 
         onClose={onClose}
-        size="4xl"
+        size="5xl"
         scrollBehavior="inside"
       >
-        <ModalContent>
-          <ModalHeader className="flex flex-col gap-1">
+        <DrawerContent>
+          <DrawerHeader className="flex flex-col gap-1">
             <div className="flex items-center gap-3">
               <FileText className="w-6 h-6 text-primary" />
               <div>
@@ -162,17 +164,17 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                 </h2>
                 {order && (
                   <div className="flex items-center gap-2 mt-1">
-                    <PurchaseOrderStatusBadge status={order.status} />
-                    <span className="text-sm text-gray-600">
-                      Created {formatDate(order.createdAt)}
+                    <PurchaseOrderStatusBadge status={order?.status} />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Created {formatDate(order?.createdAt)}
                     </span>
                   </div>
                 )}
               </div>
             </div>
-          </ModalHeader>
+          </DrawerHeader>
 
-          <ModalBody>
+          <DrawerBody>
             {isLoading ? (
               <div className="flex justify-center items-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -194,12 +196,12 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                     </CardHeader>
                     <CardBody className="pt-0">
                       <div className="space-y-2">
-                        <p className="font-medium">{order.supplierId?.name || 'N/A'}</p>
-                        {order.supplierId?.email && (
-                          <p className="text-sm text-gray-600">{order.supplierId.email}</p>
+                        <p className="font-medium">{order?.supplierId?.name || 'N/A'}</p>
+                        {order?.supplierId?.email && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{order?.supplierId?.email}</p>
                         )}
-                        {order.supplierId?.phone && (
-                          <p className="text-sm text-gray-600">{order.supplierId.phone}</p>
+                        {order?.supplierId?.phone && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{order?.supplierId?.phone}</p>
                         )}
                       </div>
                     </CardBody>
@@ -214,9 +216,9 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                     </CardHeader>
                     <CardBody className="pt-0">
                       <div className="space-y-2">
-                        <p className="font-medium">{order.warehouseId?.name || 'N/A'}</p>
-                        {order.warehouseId?.location && (
-                          <p className="text-sm text-gray-600">{order.warehouseId.location}</p>
+                        <p className="font-medium">{order?.warehouseId?.name || 'N/A'}</p>
+                        {order?.warehouseId?.location && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{order?.warehouseId?.location}</p>
                         )}
                       </div>
                     </CardBody>
@@ -231,37 +233,37 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                   <CardBody>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <label className="text-sm text-gray-600">Total Amount</label>
-                        <p className="font-semibold text-lg">{formatCurrency(order.totalAmount)}</p>
+                        <label className="text-sm text-gray-600 dark:text-gray-400">Total Amount</label>
+                        <p className="font-semibold text-lg">{formatCurrency(order?.totalAmount, 'INR')}</p>
                       </div>
                       <div>
-                        <label className="text-sm text-gray-600">Expected Delivery</label>
+                        <label className="text-sm text-gray-600 dark:text-gray-400">Expected Delivery</label>
                         <p className="font-medium">
-                          {order.expectedDeliveryDate 
-                            ? formatDate(order.expectedDeliveryDate)
+                          {order?.expectedDeliveryDate 
+                            ? formatDate(order?.expectedDeliveryDate)
                             : 'Not specified'
                           }
                         </p>
                       </div>
                       <div>
-                        <label className="text-sm text-gray-600">Created By</label>
-                        <p className="font-medium">{order.createdBy?.name || 'N/A'}</p>
+                        <label className="text-sm text-gray-600 dark:text-gray-400">Created By</label>
+                        <p className="font-medium">{order?.createdBy?.name || 'N/A'}</p>
                       </div>
                     </div>
 
-                    {order.approvedBy && (
-                      <div className="mt-4 pt-4 border-t">
+                    {order?.approvedBy && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                         <div>
-                          <label className="text-sm text-gray-600">Approved By</label>
-                          <p className="font-medium">{order.approvedBy.name}</p>
+                          <label className="text-sm text-gray-600 dark:text-gray-400">Approved By</label>
+                          <p className="font-medium">{order?.approvedBy.name}</p>
                         </div>
                       </div>
                     )}
 
-                    {order.notes && (
-                      <div className="mt-4 pt-4 border-t">
-                        <label className="text-sm text-gray-600">Notes</label>
-                        <p className="mt-1">{order.notes}</p>
+                    {order?.notes && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                        <label className="text-sm text-gray-600 dark:text-gray-400">Notes</label>
+                        <p className="mt-1">{order?.notes}</p>
                       </div>
                     )}
                   </CardBody>
@@ -276,7 +278,7 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead>
-                          <tr className="border-b border-gray-200">
+                          <tr className="border-b border-gray-200 dark:border-gray-800">
                             <th className="text-left py-2 font-medium">Product</th>
                             <th className="text-center py-2 font-medium">Quantity</th>
                             <th className="text-center py-2 font-medium">Unit Price</th>
@@ -286,14 +288,14 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                           </tr>
                         </thead>
                         <tbody>
-                          {order.items?.map((item, index) => {
+                          {order?.items?.map((item, index) => {
                             const receivedPercentage = calculateReceivedPercentage(item)
                             return (
-                              <tr key={index} className="border-b border-gray-100">
+                              <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
                                 <td className="py-3">
                                   <div>
-                                    <p className="font-medium">{item.productId?.name || 'N/A'}</p>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="font-medium">{item.productId?.productName || 'N/A'}</p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
                                       SKU: {item.productId?.sku || 'N/A'}
                                     </p>
                                   </div>
@@ -302,7 +304,7 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                                   {item.quantity}
                                 </td>
                                 <td className="py-3 text-center">
-                                  {formatCurrency(item.unitPrice)}
+                                  {formatCurrency(item.unitPrice, 'INR')}
                                 </td>
                                 <td className="py-3 text-center">
                                   <span className={`font-medium ${
@@ -310,7 +312,7 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                                       ? 'text-green-600' 
                                       : item.receivedQuantity > 0 
                                         ? 'text-orange-600' 
-                                        : 'text-gray-600'
+                                        : 'text-gray-600 dark:text-gray-400'
                                   }`}>
                                     {item.receivedQuantity}
                                   </span>
@@ -329,25 +331,25 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                                         style={{ width: `${receivedPercentage}%` }}
                                       ></div>
                                     </div>
-                                    <span className="text-xs text-gray-600">
+                                    <span className="text-xs text-gray-600 dark:text-gray-400">
                                       {receivedPercentage}%
                                     </span>
                                   </div>
                                 </td>
                                 <td className="py-3 text-right font-medium">
-                                  {formatCurrency(item.total)}
+                                  {formatCurrency(item.total, 'INR')}
                                 </td>
                               </tr>
                             )
                           })}
                         </tbody>
                         <tfoot>
-                          <tr className="border-t-2 border-gray-300">
+                          <tr className="border-t-2 border-gray-300 dark:border-gray-800">
                             <td colSpan="5" className="py-3 text-right font-semibold">
                               Total Amount:
                             </td>
                             <td className="py-3 text-right font-bold text-lg">
-                              {formatCurrency(order.totalAmount)}
+                              {formatCurrency(order?.totalAmount, 'INR')}
                             </td>
                           </tr>
                         </tfoot>
@@ -361,9 +363,9 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                 <p className="text-gray-500">Order not found</p>
               </div>
             )}
-          </ModalBody>
+          </DrawerBody>
 
-          <ModalFooter>
+          <DrawerFooter>
             <div className="flex gap-2 w-full justify-between">
               <Button variant="light" onPress={onClose}>
                 Close
@@ -372,9 +374,9 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                 {getActionButtons()}
               </div>
             </div>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       {/* Receive Items Modal */}
       <ReceiveItemsModal

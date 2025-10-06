@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
-const { generateOrgNo } = require("../utils/generate-orgNo");
 
 const userSchema = new mongoose.Schema(
   {
@@ -71,7 +70,7 @@ const userSchema = new mongoose.Schema(
     last_login: {
       type: Date,
     }
-}, { timestamps: true });
+  }, { timestamps: true });
 
 // 🔹 Hash password before saving
 userSchema.pre("save", async function (next) {
