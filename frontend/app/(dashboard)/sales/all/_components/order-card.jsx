@@ -6,9 +6,10 @@ import { Divider } from "@heroui/divider";
 import { FixedOrPercentage } from '@/libs/utils';
 import ConfirmActionModal from './ConfirmActionModal'
 import { Button } from '@heroui/button'
+import { Select, SelectItem } from '@heroui/select';
 
 export const OrderCard = ({ order, actions = {} }) => {
-  const { handleSubmitSale, submetting, ApproveSale, approving, approved, RejectSale, rejecting, rejected, CompleteSale, completing, completed } = actions
+  const { SubmitSale, submetting, ApproveSale, approving, approved, RejectSale, rejecting, rejected, CompleteSale, completing, completed, MarkOrderAsPaid, markingAsPaid, markedAsPaid } = actions
   const [rejectOpen, setRejectOpen] = React.useState(false)
   const getStatusColor = (status) => {
     const colors = {
@@ -20,9 +21,7 @@ export const OrderCard = ({ order, actions = {} }) => {
     return colors[status] || 'default';
   };
 
-  const getPaymentStatusColor = (status) => {
-    return status === 'paid' ? 'success' : 'danger';
-  };
+  const getPaymentStatusColor = (status) => (status === 'paid' ? 'success' : status == 'partial' ? 'warning' : 'danger');
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -34,7 +33,10 @@ export const OrderCard = ({ order, actions = {} }) => {
     });
   };
 
-  console.log(order)
+  const HandleUpdatePayment = async (status, id) => {
+    if (markingAsPaid) return;
+    await MarkOrderAsPaid({ id, status })
+  }
 
   return (
     <Card className=" w-full shadow-none duration-300 border border-default">
@@ -109,14 +111,14 @@ export const OrderCard = ({ order, actions = {} }) => {
           </div>
           
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-300">Discount ({order?.discount}{FixedOrPercentage(order?.discountType)})</span>
+            <span className="text-gray-600 dark:text-gray-300">Discount ({FixedOrPercentage(order?.discountType)})</span>
             <span className="font-medium text-green-600">
               -₹{((order?.subTotal * order?.discount) / 100).toFixed(2)}
             </span>
           </div>
           
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-300">Tax  ({order?.tax} {FixedOrPercentage(order?.taxType)})</span>
+            <span className="text-gray-600 dark:text-gray-300">Tax  ({FixedOrPercentage(order?.taxType)})</span>
             <span className="font-medium">₹{order?.tax.toFixed(2)}</span>
           </div>
           
@@ -152,6 +154,13 @@ export const OrderCard = ({ order, actions = {} }) => {
             {order?.status === 'approved' && (
               <Button size="sm" color="success" onPress={() => CompleteSale && CompleteSale(order._id)} disabled={completing}>{completing ? 'Completing...' : 'Complete'}</Button>
             )}
+            <Select selectedKeys={new Set([order?.paymentStatus || 'unpaid'])} size='sm' className='w-24'>
+              {["unpaid", "partial", "paid"].map(status => (
+                <SelectItem key={status} value={status}
+                    onPress={() => HandleUpdatePayment(status, order?._id)}
+                >{status}</SelectItem>
+              ))}
+            </Select>
           </div>
         </div>
       </CardFooter>

@@ -34,3 +34,30 @@ export const UseAuthLogin = () => {
 
    return mutate;
 };
+
+
+export const useAuthLogout = () => {
+   const dispatch = useDispatch();
+   const router = useRouter();
+   const queryClient = useQueryClient();
+   const mutate = useMutation({
+      mutationFn: async () => {
+         const response = await api.post("/auth/logout");
+         return response.data;
+      },
+      onSuccess: (data) => {
+         // Clear user from Redux
+         dispatch(setUser(null));
+         // Clear the "use-me" query cache
+         queryClient.removeQueries(["use-me"]);
+         queryClient.clear();
+         // Navigate to login page
+         router.push("/login");
+         toast.success("Logged out successfully");
+      },
+      onError: (error) => {
+         toast.error(error.response?.data?.message || "Logout failed. Please try again.");
+      },
+   });
+   return mutate;
+}

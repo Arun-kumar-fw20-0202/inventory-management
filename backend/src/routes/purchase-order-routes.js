@@ -6,7 +6,7 @@ const {
    rejectPurchaseOrder,
    receivePurchaseOrder,
    getPurchaseOrders,
-   getPurchaseOrderById
+   getPurchaseOrderById,
 } = require('../controllers/purchase-order/purchase-controller');
 
 // Import middleware
@@ -20,16 +20,17 @@ const {
 const { RoleVerifyMiddleware } = require('../middleware/role-verify-middleware');
 
 // Apply authentication middleware to all routes
-PurchaseOrderRoutes.use(RoleVerifyMiddleware("all"));
+// PurchaseOrderRoutes.use();
 
 // Routes with validation
-PurchaseOrderRoutes.post('/', validateCreatePurchaseOrder, createPurchaseOrder);
-PurchaseOrderRoutes.get('/', validateGetPurchaseOrders, getPurchaseOrders);
-PurchaseOrderRoutes.get('/:id', validatePurchaseOrderId, getPurchaseOrderById);
-PurchaseOrderRoutes.patch('/:id/submit', validatePurchaseOrderId, submitPurchaseOrder);
-PurchaseOrderRoutes.patch('/:id/approve', validatePurchaseOrderId, approvePurchaseOrder);
-PurchaseOrderRoutes.patch('/:id/reject', validateRejectPurchaseOrder, rejectPurchaseOrder);
-PurchaseOrderRoutes.patch('/:id/receive', validateReceivePurchaseOrder, receivePurchaseOrder);
+PurchaseOrderRoutes.post('/', validateCreatePurchaseOrder,RoleVerifyMiddleware("all") , createPurchaseOrder);
+PurchaseOrderRoutes.get('/', validateGetPurchaseOrders,RoleVerifyMiddleware('all'), getPurchaseOrders);
+PurchaseOrderRoutes.get('/:id', validatePurchaseOrderId, RoleVerifyMiddleware("all"), getPurchaseOrderById);
+PurchaseOrderRoutes.patch('/:id/submit', validatePurchaseOrderId, RoleVerifyMiddleware("manager" , 'admin'), submitPurchaseOrder);
+PurchaseOrderRoutes.patch('/:id/approve', validatePurchaseOrderId, RoleVerifyMiddleware('admin'), approvePurchaseOrder);
+PurchaseOrderRoutes.patch('/:id/reject', validateRejectPurchaseOrder,RoleVerifyMiddleware('admin'), rejectPurchaseOrder);
+PurchaseOrderRoutes.patch('/:id/receive', validateReceivePurchaseOrder, RoleVerifyMiddleware('admin', 'manager'), receivePurchaseOrder);
+
 
 module.exports = {
    PurchaseOrderRoutes

@@ -5,12 +5,13 @@ import { useFetchStock } from '@/libs/query/stock/stock-query'
 import { Autocomplete, AutocompleteItem } from "@heroui/autocomplete"
 import { Radio, RadioGroup } from '@heroui/radio'
 import SupplierCustomerAutocomplete from '@/components/dynamic/supplier-customer/supplier-customer-autocomplete'
-import { formatCurrency } from '@/libs/utils'
+import { formatCurrency, InvoiceNumberGenerator } from '@/libs/utils'
 import { Button } from '@heroui/button'
 import { Card } from '@heroui/card'
 import { Input } from '@heroui/input'
-import { Plus, Trash, Receipt, User, Package, Building2, Mail, Phone, MapPin, Calendar } from 'lucide-react'
+import { Plus, Trash, Receipt, User, Package, Building2, Mail, Phone, MapPin, Calendar, BarChart3 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useSelector } from 'react-redux'
 
 const SalesForm = () => {
   // State Management
@@ -26,9 +27,14 @@ const SalesForm = () => {
   const [taxType, setTaxType] = React.useState('fixed')
   const [taxValue, setTaxValue] = React.useState(0)
 
+  const organisation = useSelector((state) => state?.organisation?.organisation?.organisation);
+
+  // console.log(organisation, 'asjdlkfjlaskdfj')
+
   const searchRef = useRef()
   const createSale = useCreateSale()
 
+  const myinvoicenumber = useMemo(() => InvoiceNumberGenerator({ length: 8, prefix: 'INV-' }), [createSale.isSuccess])
   // Data Fetching
   const { data: stockData, isLoading: loadingStock } = useFetchStock({
     search,
@@ -183,6 +189,7 @@ const SalesForm = () => {
       taxType,
       discount: calculations.discountAmount,
       discountType,
+      invoiceNo: myinvoicenumber,
       grandTotal: calculations.grandTotal
     }
 
@@ -207,13 +214,15 @@ const SalesForm = () => {
     day: 'numeric' 
   })
 
+  
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Product Selection Section */}
       <Card className="p-6 shadow-lg border-2 border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-3 bg-primary/10 rounded-lg">
-            <Receipt className="w-6 h-6 text-primary" />
+            <BarChart3 className="w-6 h-6 text-primary" />
           </div>
           <div>
             <h2 className="text-2xl font-bold">Create New Sale</h2>
@@ -234,6 +243,7 @@ const SalesForm = () => {
             >
               <Radio value="customer">Customer</Radio>
               <Radio value="supplier">Supplier</Radio>
+              <Radio value="">Both</Radio>
             </RadioGroup>
             <SupplierCustomerAutocomplete 
               label={`Select ${cusSupplierMode === 'customer' ? 'Customer' : 'Supplier'}`}
@@ -302,7 +312,9 @@ const SalesForm = () => {
             </div>
             <div className="text-right">
               <div className="text-sm opacity-90">Invoice #</div>
-              <div className="text-2xl font-bold">---</div>
+              <div className="text-2xl font-bold">
+                {myinvoicenumber}
+              </div>
             </div>
           </div>
         </div>
@@ -312,23 +324,23 @@ const SalesForm = () => {
           {/* Bill From (Your Company) */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <Building2 className="w-5 h-5 text-primary" />
+              <BarChart3 className="w-5 h-5 text-primary" />
               <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bill From</h3>
             </div>
             <div className="space-y-2">
-              <div className="text-xl font-bold">Your Company Name</div>
+              <div className="text-xl font-bold">{organisation?.name}</div>
               <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
-                  <span>123 Business Street, City, State 12345</span>
+                  <span>{organisation?.details?.address}, {organisation?.details?.city}, {organisation?.details?.state}, {organisation?.details?.zipCode}, {organisation?.details?.country}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4" />
-                  <span>+1 (555) 123-4567</span>
+                  <span>{organisation?.details?.phone}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4" />
-                  <span>info@yourcompany.com</span>
+                  <span>{organisation?.details?.email}</span>
                 </div>
               </div>
             </div>
@@ -370,7 +382,7 @@ const SalesForm = () => {
                     </div>
                   )}
                 </div>
-                <div className="flex gap-4 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                {/* <div className="flex gap-4 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                   <div className="text-xs">
                     <span className="text-gray-500 dark:text-gray-400">Credit Limit: </span>
                     <span className="font-semibold text-green-600">{formatCurrency(customerDetails.creditLimit || 0)}</span>
@@ -379,7 +391,7 @@ const SalesForm = () => {
                     <span className="text-gray-500 dark:text-gray-400">Balance: </span>
                     <span className="font-semibold text-blue-600">{formatCurrency(customerDetails.currentBalance || 0)}</span>
                   </div>
-                </div>
+                </div> */}
               </div>
             ) : (
               <div className="text-gray-400 dark:text-gray-500 italic h-32 flex items-center">

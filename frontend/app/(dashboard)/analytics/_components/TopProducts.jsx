@@ -49,7 +49,7 @@ const TopProducts = ({ params = {} }) => {
               </div>
               <div className="text-right">
                 <div className="text-sm">Qty: {p?.quantity} {p?.unit}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">{formatCurrency(p?.revenue)}</div>
+                <div className="text-sm text-success">{formatCurrency(p?.revenue)}</div>
               </div>
             </div>
           ))}

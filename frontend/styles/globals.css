@@ -1,3 +1,54 @@
 @import "tailwindcss";
 
-@config "../tailwind.config.js"
+/* @plugin "tailwindcss-animate"; */
+/* @import "tw-animate-css"; */
+
+/* @custom-variant dark (&:is(.dark *)); */
+
+@config "../tailwind.config.js";
+
+
+/*  */
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+    background: #adaeb0;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #bcbdbf7c;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #71809668;
+}
+
+/* Firefox scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+.dark * {
+    scrollbar-color: #4a5568 #2d3748;
+}

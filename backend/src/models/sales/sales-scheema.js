@@ -48,7 +48,13 @@ const saleOrderSchema = new mongoose.Schema({
   rejectedAt: { type: Date },
   rejectedReason: { type: String },
   completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  markedAsPaidBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   completedAt: { type: Date },
+  invoiceNo: {
+    type: String,
+    required: true,
+    unique: true,
+  },
   discountType: {
     type: String,
     enum: ['fixed', 'percentage'],

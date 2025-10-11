@@ -1,4 +1,4 @@
-const { SummeryController, RevenueTrendsController, TopSellingProductsController, CustomerInsightsController, InventoryTurnoverController, SalesByRegionController, ProfitMarginsController } = require('../controllers/analytics/analytics-controller');
+const { SummeryController, RevenueTrendsController, TopSellingProductsController, CustomerInsightsController, InventoryTurnoverController, SalesByRegionController, ProfitMarginsController, PurchaseOrderAnalyticsController } = require('../controllers/analytics/analytics-controller');
 const { RoleVerifyMiddleware } = require('../middleware/role-verify-middleware');
 
 const AnalyticsRouter = require('express').Router();
@@ -17,6 +17,9 @@ AnalyticsRouter.get("/inventory-turnover", RoleVerifyMiddleware('admin', 'manage
 AnalyticsRouter.get("/sales-by-region", RoleVerifyMiddleware('admin', 'manager', 'superadmin') , SalesByRegionController)
 // Profit Margins
 AnalyticsRouter.get("/profit-margins", RoleVerifyMiddleware('admin', 'manager', 'superadmin') , ProfitMarginsController)
+
+// purchase order analytics
+AnalyticsRouter.get("/purchase-order-analytics", RoleVerifyMiddleware('admin', 'manager', 'superadmin') , PurchaseOrderAnalyticsController)
 
 module.exports = {
     AnalyticsRouter

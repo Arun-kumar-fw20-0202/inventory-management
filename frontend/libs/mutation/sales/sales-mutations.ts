@@ -70,6 +70,29 @@ export const useApproveSale = () => {
   })
 }
 
+
+export const useUpdatePaymentStatus = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({id, status='pending'}) => {
+      const res = await api.patch(`/sales/${id}/payment-status?status=${status}`)
+      return res.data
+    },
+    onSuccess: (data, id) => {
+      qc.invalidateQueries({ queryKey: ['sales'] })
+      qc.invalidateQueries({ queryKey: ['sale', id] })
+      qc.invalidateQueries({ queryKey: ['sales-analytics'] })
+      qc.invalidateQueries({ queryKey: ['use-fetch-my-stock'] })
+      toast.success(data?.message || 'Payment status updated')
+    },
+    onError: (err) => {
+      const msg = err?.response?.data?.message || 'Error updating payment status'
+      toast.error(msg)
+      console.error('Approve sale error', err)
+    }
+  })
+}
+
 export const useRejectSale = () => {
   const qc = useQueryClient()
   return useMutation({

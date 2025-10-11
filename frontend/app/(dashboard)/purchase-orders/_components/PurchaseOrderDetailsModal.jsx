@@ -234,7 +234,7 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <label className="text-sm text-gray-600 dark:text-gray-400">Total Amount</label>
-                        <p className="font-semibold text-lg">{formatCurrency(order?.totalAmount, 'INR')}</p>
+                        <p className="font-semibold text-success text-lg">{formatCurrency(order?.totalAmount, 'INR')}</p>
                       </div>
                       <div>
                         <label className="text-sm text-gray-600 dark:text-gray-400">Expected Delivery</label>
@@ -276,9 +276,9 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                   </CardHeader>
                   <CardBody>
                     <div className="overflow-x-auto">
-                      <table className="w-full">
+                      <table className="w-full overflow-x-auto table-auto border-collapse">
                         <thead>
-                          <tr className="border-b border-gray-200 dark:border-gray-800">
+                          <tr className="text-sm border-b border-gray-200 dark:border-gray-800 text-nowrap gap-3">
                             <th className="text-left py-2 font-medium">Product</th>
                             <th className="text-center py-2 font-medium">Quantity</th>
                             <th className="text-center py-2 font-medium">Unit Price</th>
@@ -291,7 +291,7 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                           {order?.items?.map((item, index) => {
                             const receivedPercentage = calculateReceivedPercentage(item)
                             return (
-                              <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
+                              <tr key={index} className="border-b border-gray-100 dark:border-gray-800 text-sm">
                                 <td className="py-3">
                                   <div>
                                     <p className="font-medium">{item.productId?.productName || 'N/A'}</p>
@@ -303,7 +303,7 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                                 <td className="py-3 text-center font-medium">
                                   {item.quantity}
                                 </td>
-                                <td className="py-3 text-center">
+                                <td className="py-3 text-center text-warning">
                                   {formatCurrency(item.unitPrice, 'INR')}
                                 </td>
                                 <td className="py-3 text-center">
@@ -336,7 +336,7 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                                     </span>
                                   </div>
                                 </td>
-                                <td className="py-3 text-right font-medium">
+                                <td className="py-3 text-right font-medium text-warning">
                                   {formatCurrency(item.total, 'INR')}
                                 </td>
                               </tr>
@@ -348,7 +348,7 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
                             <td colSpan="5" className="py-3 text-right font-semibold">
                               Total Amount:
                             </td>
-                            <td className="py-3 text-right font-bold text-lg">
+                            <td className="py-3 text-right font-bold text-lg text-success">
                               {formatCurrency(order?.totalAmount, 'INR')}
                             </td>
                           </tr>
@@ -367,7 +367,7 @@ const PurchaseOrderDetailsModal = ({ isOpen, onClose, orderId }) => {
 
           <DrawerFooter>
             <div className="flex gap-2 w-full justify-between">
-              <Button variant="light" onPress={onClose}>
+              <Button variant="flat" color='danger' onPress={onClose}>
                 Close
               </Button>
               <div className="flex gap-2">

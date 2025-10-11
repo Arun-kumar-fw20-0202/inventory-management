@@ -12,14 +12,13 @@ const SelectProductDrawr = ({
     selectedProducts = [],
     onProductSelect,
     onProductRemove,
-    onProductUpdate
 }) => {
     const [limit, setLimit] = React.useState(20)
     const [search, setSearch] = React.useState('')
 
     const { data: products, isLoading: productsLoading } = useFetchStock({
         search, limit,
-        includeAnalytics: true,
+        includeAnalytics: false,
         // exportData: true,
         fields: 'productId,productName, sku, quantity, purchasePrice, warehouseId',
     })
@@ -59,39 +58,6 @@ const SelectProductDrawr = ({
                                                 </div>
 
                                                 <div className="flex items-center gap-2 w-full md:w-auto">
-                                                    <div className="flex gap-2 items-center">
-                                                        <Input
-                                                            type="number"
-                                                            variant='bordered'
-                                                            className="w-28"
-                                                            label="Qty"
-                                                            value={isSelected ? ((selected.quantity !== undefined && selected.quantity !== null) ? selected.quantity.toString() : '') : ''}
-                                                            onChange={(e) => {
-                                                                const val = e?.target?.value
-                                                                if (!isSelected) return
-                                                                onProductUpdate?.(product, { quantity: parseInt(val) || 0, unitPrice: selected.unitPrice ?? product?.unitPrice ?? 0 })
-                                                            }}
-                                                            disabled={!isSelected}
-                                                            size='sm'
-                                                            // placeholder="Qty"
-                                                        />
-
-                                                        <Input
-                                                            type="number"
-                                                            variant='bordered'
-                                                            label="Unit Price"
-                                                            className="w-36"
-                                                            value={isSelected ? ((selected.unitPrice !== undefined && selected.unitPrice !== null) ? selected.unitPrice.toString() : '') : ''}
-                                                            onChange={(e) => {
-                                                                const val = e?.target?.value
-                                                                if (!isSelected) return
-                                                                onProductUpdate?.(product, { quantity: selected.quantity ?? product?.quantity ?? 1, unitPrice: parseFloat(val) || 0 })
-                                                            }}
-                                                            disabled={!isSelected}
-                                                            size='sm'
-                                                            // placeholder="Unit Price"
-                                                        />
-                                                    </div>
 
                                                     {!isSelected ? (
                                                         <Button

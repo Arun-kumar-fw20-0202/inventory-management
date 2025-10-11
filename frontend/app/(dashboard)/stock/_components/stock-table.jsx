@@ -149,74 +149,72 @@ const StockTable = ({
    
    return (
       <>
-         <Card className="shadow-none">
-            <Table
-               aria-label="Enhanced stock table"
-               isHeaderSticky
-               isStriped
-               shadow='none'
-               selectionMode="multiple"
-               onSelectionChange={setBulkSelection}
-               topContent={
-                  <div className="flex flex-wrap gap-3 sticky left-0 justify-between items-center p-4">
-                     <div>
-                        <h2 className="text-lg font-semibold">Stock Inventory</h2>
-                        {paginationData && (
-                           <p className="text-sm text-gray-500">
-                              {paginationData.totalItems} total items
-                           </p>
-                        )}
-                     </div>
-                     <div className="flex gap-2">
-                        <Button 
-                           size='sm'
-                           variant="flat" 
-                           onPress={onRefresh}
-                           isLoading={isLoading}
-                           startContent={<RefreshCcw size={16} />}
-                        >
-                           Refresh
-                        </Button>
-                        <Button onPress={onAddNew} color='primary' variant='flat' size='sm' startContent={<Plus className="w-4 h-4" />}>
-                           Add New Stock
-                        </Button>
-                     </div>
+         <Table
+            aria-label="Enhanced stock table"
+            isHeaderSticky
+            isStriped
+            shadow='none'
+            selectionMode="multiple"
+            onSelectionChange={setBulkSelection}
+            topContent={
+               <div className="flex flex-wrap gap-3 sticky left-0 justify-between items-center">
+                  <div>
+                     <h2 className="text-lg font-semibold">Stock Inventory</h2>
+                     {paginationData && (
+                        <p className="text-sm text-gray-500">
+                           {paginationData.totalItems} total items
+                        </p>
+                     )}
+                  </div>
+                  <div className="flex gap-2">
+                     <Button 
+                        size='sm'
+                        variant="flat" 
+                        onPress={onRefresh}
+                        isLoading={isLoading}
+                        startContent={<RefreshCcw size={16} />}
+                     >
+                        Refresh
+                     </Button>
+                     <Button onPress={onAddNew} color='primary' variant='flat' size='sm' startContent={<Plus className="w-4 h-4" />}>
+                        Add New Stock
+                     </Button>
+                  </div>
+               </div>
+            }
+            classNames={TableStyleFormate()}
+         >
+            <TableHeader columns={columns}>
+               {(column) => (
+                  <TableColumn
+                     key={column.uid}
+                     align={column.uid === "actions" ? "center" : "start"}
+                     allowsSorting={column.sortable}
+                  >
+                     {column.name}
+                  </TableColumn>
+               )}
+            </TableHeader>
+            <TableBody
+               emptyContent={
+                  <div className="text-center py-8">
+                     <p className="text-gray-500 text-lg mb-2">No stock items found</p>
+                     <p className="text-sm text-gray-400">Try adjusting your search or filters</p>
                   </div>
                }
-               classNames={TableStyleFormate()}
+               items={tableData || []}
+               isLoading={isLoading}
+               loadingContent={<Spinner size="lg" />}
             >
-               <TableHeader columns={columns}>
-                  {(column) => (
-                     <TableColumn
-                        key={column.uid}
-                        align={column.uid === "actions" ? "center" : "start"}
-                        allowsSorting={column.sortable}
-                     >
-                        {column.name}
-                     </TableColumn>
-                  )}
-               </TableHeader>
-               <TableBody
-                  emptyContent={
-                     <div className="text-center py-8">
-                        <p className="text-gray-500 text-lg mb-2">No stock items found</p>
-                        <p className="text-sm text-gray-400">Try adjusting your search or filters</p>
-                     </div>
-                  }
-                  items={tableData || []}
-                  isLoading={isLoading}
-                  loadingContent={<Spinner size="lg" />}
-               >
-                  {(item) => (
-                     <TableRow key={item._id}>
-                        {(columnKey) => (
-                           <TableCell>{renderCell(item, columnKey)}</TableCell>
-                        )}
-                     </TableRow>
-                  )}
-               </TableBody>
-            </Table>
-         </Card>
+               {(item) => (
+                  <TableRow key={item._id}>
+                     {(columnKey) => (
+                        <TableCell>{renderCell(item, columnKey)}</TableCell>
+                     )}
+                  </TableRow>
+               )}
+            </TableBody>
+         </Table>
       </>
    )
 }

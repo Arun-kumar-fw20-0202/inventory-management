@@ -40,7 +40,7 @@ import { MailIcon } from "lucide-react";
   return (
     <div className="min-h-screen bg-transparent flex items-center justify-center p-4">
       <section className="h-full w-full absolute front-section before:bg-primary before:bg-opacity-30"></section>
-      <Card className="w-full max-w-md bg-[rgba(255,255,255,1)] border shadow-2xl">
+      <Card className="w-full max-w-md  border shadow-2xl">
         <CardBody className="py-8 px-8">
           <form onSubmit={handleSubmit(onSubmit)}>
           {/* Header */}
@@ -72,12 +72,11 @@ import { MailIcon } from "lucide-react";
                   endContent={
                     <MailIcon className="text-xl text-default-400 pointer-events-none flex-shrink-0" />
                   }
-                  className="text-black dark:text-black"
                   label="Phone or Email Address"
                   placeholder="Enter your Phone or Email"
                   variant="bordered"
                   classNames={{
-                    input: "text-sm text-black",
+                    input: "text-sm",
                     inputWrapper: "border-default-200 data-[hover=true]:border-primary group-data-[focus=true]:border-primary",
                   }}
                   isInvalid={!!errors.email}
@@ -102,7 +101,6 @@ import { MailIcon } from "lucide-react";
                     // endContent={
                     //   <EyeIcon />
                     // }
-                    className="text-black dark:text-black"
                     label="Password"
                     placeholder="Enter your password"
                     type={showPassword ? "text" : "password"}

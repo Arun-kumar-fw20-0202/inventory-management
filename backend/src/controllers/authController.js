@@ -147,3 +147,14 @@ exports.getMe = async (req, res, next) => {
     next(err);
   }
 };
+
+
+exports.Logoutme = async (req, res, next) => {
+  try {
+    return res.status(200).cookie("inventory_management_token", "", 
+      { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: 'lax', expires: new Date(0) }
+    ).json({ success: true, message: "Logout successful" });
+  } catch (err) {
+    next(err);
+  }
+}

@@ -12,7 +12,7 @@ const InventoryTurnover = ({ params = {} }) => {
         return (
             <Card>
                 <CardHeader>
-                    <h3 className="text-lg font-semibold">Inventory Turnover</h3>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Inventory Turnover</h3>
                 </CardHeader>
                 <CardBody>
                     <div className="space-y-2">
@@ -28,13 +28,13 @@ const InventoryTurnover = ({ params = {} }) => {
   return (
     <Card>
       <CardHeader>
-        <h3 className="text-lg font-semibold">Inventory Turnover</h3>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Inventory Turnover</h3>
       </CardHeader>
       <CardBody>
         <div className="space-y-2">
-          <div className="text-sm">Total Cost Of Good Sale {"( COGS )"}: {formatCurrency(payload.totalCOGS) ?? '-'}</div>
-          <div className="text-sm">Avg Inventory Value: {payload.avgInventoryValue ?? '-'}</div>
-          <div className="text-sm font-bold">Turnover: {payload.turnover?.toFixed?.(2) ?? payload.turnover ?? '-'}</div>
+          <div className="text-sm">Total Cost Of Good Sale {"( COGS )"}: <span className="text-blue-600 dark:text-blue-400 font-medium">{formatCurrency(payload.totalCOGS) ?? '-'}</span></div>
+          <div className="text-sm">Avg Inventory Value: <span className="text-green-600 dark:text-green-400 font-medium">{payload.avgInventoryValue ?? '-'}</span></div>
+          <div className="text-sm font-bold">Turnover: <span className="text-purple-600 dark:text-purple-400">{payload.turnover?.toFixed?.(2) ?? payload.turnover ?? '-'}</span></div>
         </div>
       </CardBody>
     </Card>

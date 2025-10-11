@@ -7,6 +7,8 @@ import { formatCurrency } from '@/libs/utils'
 const PurchaseOrdersSummary = () => {
   const { data: summaryResponse, isLoading, error } = useFetchPurchaseOrdersSummary()
 
+  console.log(summaryResponse)
+
   const summary = summaryResponse || {
     draft: 0,
     pending: 0,

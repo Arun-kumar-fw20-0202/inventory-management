@@ -293,3 +293,13 @@ export const isValidPhone = (phone) => {
   const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/
   return phoneRegex.test(phone)
 }
+
+
+export const InvoiceNumberGenerator = ({ length = 6, prefix = '' }) => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let result = prefix
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return result
+}

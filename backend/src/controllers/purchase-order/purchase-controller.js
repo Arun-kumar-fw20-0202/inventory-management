@@ -60,8 +60,6 @@ const createPurchaseOrder = async (req, res) => {
       const { supplierId, warehouseId, items, expectedDeliveryDate, notes } = req.body;
       const userId = req.profile.id;
 
-      console.log('Create purchase order request body:', req.body);
-
       // Validate required fields
       if (!supplierId || !warehouseId || !items) {
          return error(res, 'SupplierId, warehouseId, and items are required', null, 400);
@@ -98,6 +96,7 @@ const createPurchaseOrder = async (req, res) => {
          notes,
          totalAmount: processedItems.reduce((sum, item) => sum + item.total, 0),
          createdBy: userId,
+         orgNo: req.profile.orgNo,
          status: 'Draft'
       });
 
@@ -105,9 +104,9 @@ const createPurchaseOrder = async (req, res) => {
 
       // Populate related data for response
       const populatedOrder = await PurchaseOrderModal.findById(purchaseOrder._id)
-         .populate('supplierId', 'name email')
+         .populate('supplierId', 'name email phone')
          .populate('warehouseId', 'name location')
-         .populate('createdBy', 'name email')
+         .populate('createdBy', 'name email phone')
          .populate('items.productId', 'name sku')
          .lean();
 
@@ -327,6 +326,7 @@ const receivePurchaseOrder = async (req, res) => {
    }
 };
 
+
 /**
  * Get paginated list of purchase orders with filters
  */
@@ -348,7 +348,13 @@ const getPurchaseOrders = async (req, res) => {
       const skip = (pageNum - 1) * limitNum;
 
       // Build filter query
-      const filter = {};
+      const filter = {
+         orgNo: req.profile.orgNo
+      };
+
+      if(req.profile.activerole == 'staff'){
+         filter.createdBy = req.profile._id;
+      }
 
       if (status) filter.status = status;
       if (supplierId) filter.supplierId = supplierId;
@@ -370,10 +376,10 @@ const getPurchaseOrders = async (req, res) => {
       // Execute queries in parallel
       const [orders, totalCount] = await Promise.all([
          PurchaseOrderModal.find(filter)
-            .populate('supplierId', 'name email')
+            .populate('supplierId', 'name email phone')
             .populate('warehouseId', 'name location')
-            .populate('createdBy', 'name email')
-            .populate('approvedBy', 'name email')
+            .populate('createdBy', 'name email phone')
+            .populate('approvedBy', 'name email phone')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limitNum)
@@ -432,6 +438,11 @@ const getPurchaseOrderById = async (req, res) => {
    }
 };
 
+
+const GetPurchaseSummeryController = async (req, res) => {
+   
+}
+
 module.exports = {
    createPurchaseOrder,
    submitPurchaseOrder,
@@ -439,5 +450,6 @@ module.exports = {
    rejectPurchaseOrder,
    receivePurchaseOrder,
    getPurchaseOrders,
-   getPurchaseOrderById
+   GetPurchaseSummeryController,
+   getPurchaseOrderById,
 };

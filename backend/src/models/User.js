@@ -91,6 +91,17 @@ const OrganizationSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  payment : {
+    lastPricingId: { type: mongoose.Schema.Types.ObjectId, ref: 'pricing', },
+    pricing_type: { type: String },
+    amount: { type: String },
+    paymentDate : { type: Date },
+    willExpire: { type: Date },
+    details: {
+      type: String,
+    },
+    lastPaymentId: { type: String }
+  },
   orgNo: {
     type: String, 
     required: true,
@@ -101,6 +112,27 @@ const OrganizationSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User', 
   },
+  counts : {
+    users: { type: Number, default: 0 },
+    managers: { type: Number, default: 0 },
+    staff: { type: Number, default: 0 },
+  },
+  details: {
+    address: { type: String, default: '' },
+    city: { type: String, default: '' },
+    state: { type: String, default: '' },
+    zip: { type: String, default: '' },
+    country: { type: String, default: '' },
+    phone: { type: String, default: '' },
+    email: { type: String, default: '' },
+    website: { type: String, default: '' },
+    taxId: { type: String, default: '' },
+    currency: { type: String, default: 'INR' },
+    logoUrl: { type: String, default: '' },
+    businessType: { type: String, default: '' },
+    industry: { type: String, default: '' },
+    additionalInfo: { type: String, default: '' },
+  }
 }, { timestamps: true });
 
 

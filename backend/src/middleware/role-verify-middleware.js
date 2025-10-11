@@ -8,7 +8,7 @@ const RoleVerifyMiddleware = (...allowedRoles) => {
       // Retrieve token from cookies or Authorization header
       const token = req?.cookies?.inventory_management_token || req.headers.authorization?.split(' ')[1]; 
 
-      console.log({ token }, 'token');
+      // console.log({ token }, 'token');
       
       if (!token) {
         return handleUnauthorized(res);
@@ -17,6 +17,10 @@ const RoleVerifyMiddleware = (...allowedRoles) => {
       // Verify the token and extract user data
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await UserModal.findById(decoded.userId);
+
+      if(user?.block_status) {
+        return res.clearCookie('inventory_management_token').status(403).json({ status: false, message: 'Your account is blocked. Please contact support.' });
+      }
 
       if (!user) {
         return res.status(404).json({ status: false, message: 'User not found' });
@@ -28,6 +32,8 @@ const RoleVerifyMiddleware = (...allowedRoles) => {
       if (allowedRoles.includes("all") || allowedRoles.includes(user.activerole)) {
         req.profile = user; 
         return next(); 
+      }else{
+        return res.status(500).json({ status: false, message: 'You are not eligible !' });
       }
 
       

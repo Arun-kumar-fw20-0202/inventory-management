@@ -85,6 +85,11 @@ const purchaseOrderSchema = new mongoose.Schema(
          trim: true,
          maxlength: 1000,
       },
+      orgNo: {
+         type: String,
+         required: true,
+         index: true,
+      },
    },
    { 
       timestamps: true,

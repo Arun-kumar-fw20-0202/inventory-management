@@ -3,6 +3,7 @@ import React from 'react'
 import { Card, CardBody, CardHeader } from '@heroui/card'
 import { useFetchRevenueTrends } from '@/libs/mutation/analytics/analytics-mutations'
 import { formatCurrency } from '@/libs/utils'
+import { RevenueTrendsGraph } from "./RevenueTrendsGraph"
 
 const Sparkline = ({ data = [] }) => {
   if (!data.length) return <div className="text-sm text-gray-500">No data</div>
@@ -45,7 +46,25 @@ const RevenueTrends = ({ params = {} }) => {
         </div>
       </CardHeader>
       <CardBody>
-        <Sparkline data={series} />
+        {/* <Sparkline data={series} /> */}
+        {/* {
+            "period": "2025-09-29T00:00:00.000Z",
+            "revenue": 1000,
+            "orders": 1
+            }, */}
+        <RevenueTrendsGraph 
+            chartData={series}
+            chartConfig={{
+                revenue: {
+                    label: "revenue",
+                    color: "#de4b01",
+                },
+                orders: {
+                    label: "orders",
+                    color: "#f4d109",
+                },
+            }}
+        />
       </CardBody>
     </Card>
   )

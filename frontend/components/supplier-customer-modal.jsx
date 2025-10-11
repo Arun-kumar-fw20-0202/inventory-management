@@ -261,7 +261,7 @@ const SupplierCustomerModal = ({
                <h3 className="text-lg font-medium">Basic Information</h3>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
-                     label="Name *"
+                     label="Name"
                      placeholder="Enter full name"
                      value={formData.name}
                      onChange={(e) => handleInputChange('name', e.target.value)}
@@ -269,7 +269,7 @@ const SupplierCustomerModal = ({
                      isRequired
                   />
                   <Input
-                     label="Email *"
+                     label="Email"
                      placeholder="Enter email address"
                      type="email"
                      value={formData.email}
@@ -278,7 +278,7 @@ const SupplierCustomerModal = ({
                      isRequired
                   />
                   <Input
-                     label="Phone *"
+                     label="Phone"
                      placeholder="Enter phone number"
                      value={formData.phone}
                      onChange={(e) => handleInputChange('phone', e.target.value)}
@@ -300,7 +300,7 @@ const SupplierCustomerModal = ({
                      variant="bordered"
                   />
                   <Select
-                     label="Type *"
+                     label="Type"
                      placeholder="Select type"
                      selectedKeys={[formData.type]}
                      onSelectionChange={(keys) => handleInputChange('type', Array.from(keys)[0])}
@@ -319,7 +319,7 @@ const SupplierCustomerModal = ({
                <h3 className="text-lg font-medium">Address Information</h3>
                <div className="grid grid-cols-1 gap-4">
                   <Input
-                     label="Street Address *"
+                     label="Street Address"
                      placeholder="Enter street address"
                      value={formData.address.street}
                      onChange={(e) => handleInputChange('street', e.target.value, 'address')}
@@ -328,7 +328,7 @@ const SupplierCustomerModal = ({
                   />
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <Input
-                        label="City *"
+                        label="City"
                         placeholder="Enter city"
                         value={formData.address.city}
                         onChange={(e) => handleInputChange('city', e.target.value, 'address')}
@@ -336,7 +336,7 @@ const SupplierCustomerModal = ({
                         isRequired
                      />
                      <Input
-                        label="State *"
+                        label="State"
                         placeholder="Enter state"
                         value={formData.address.state}
                         onChange={(e) => handleInputChange('state', e.target.value, 'address')}
@@ -344,7 +344,7 @@ const SupplierCustomerModal = ({
                         isRequired
                      />
                      <Input
-                        label="Zip Code *"
+                        label="Zip Code"
                         placeholder="Enter zip code"
                         value={formData.address.zipCode}
                         onChange={(e) => handleInputChange('zipCode', e.target.value, 'address')}
@@ -353,7 +353,7 @@ const SupplierCustomerModal = ({
                      />
                   </div>
                   <Input
-                     label="Country *"
+                     label="Country"
                      placeholder="Enter country"
                      value={formData.address.country}
                      onChange={(e) => handleInputChange('country', e.target.value, 'address')}

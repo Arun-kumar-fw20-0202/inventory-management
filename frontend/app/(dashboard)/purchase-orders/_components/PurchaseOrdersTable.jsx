@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from 'react'
-import { Card, CardBody, CardHeader } from '@heroui/card'
+import { Card, CardBody, CardFooter, CardHeader } from '@heroui/card'
 import { Button } from '@heroui/button'
 import { Input } from '@heroui/input'
 import { Select, SelectItem } from '@heroui/select'
@@ -10,10 +10,12 @@ import {
   Download, 
   RefreshCw,
   Eye,
-  Edit,
   Check,
   X,
-  Package
+  Package,
+  TableIcon,
+  GridIcon,
+  TableOfContents,
 } from 'lucide-react'
 import { 
   useFetchPurchaseOrders,
@@ -21,15 +23,17 @@ import {
   useApprovePurchaseOrder,
   useRejectPurchaseOrder
 } from '@/libs/mutation/purchase-order/purchase-order-mutation'
-import PurchaseOrderStatusBadge from './PurchaseOrderStatusBadge'
 import PurchaseOrderDetailsModal from './PurchaseOrderDetailsModal'
-import { formatCurrency, formatDate } from '@/libs/utils'
+import PurchaseOrdersCardView from './PurchaseOrdersCardView'
+import PurchaseOrdersTableView from './PurchaseOrdersTableView'
+import { useSelector } from 'react-redux'
 
 const PurchaseOrdersTable = () => {
+  const activerole = useSelector((state) => state.auth.user?.data?.activerole);
   const [filters, setFilters] = useState({
     page: 1,
     limit: 10,
-   //  status: '',
+    // status: '',
     search: '',
    //  startDate: '',
    //  endDate: ''
@@ -52,6 +56,7 @@ const PurchaseOrdersTable = () => {
 
   const orders = purchaseOrdersResponse?.data?.orders || []
   const pagination = purchaseOrdersResponse?.data?.pagination || {}
+  const [viewMode, setViewMode] = useState('table') // 'table' | 'card'
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({
@@ -105,7 +110,7 @@ const PurchaseOrdersTable = () => {
       <Button
         key="view"
         size="sm"
-        variant="light"
+        variant="flat"
         isIconOnly
         onPress={() => handleViewDetails(order)}
       >
@@ -114,7 +119,7 @@ const PurchaseOrdersTable = () => {
     )
 
     // Status-specific action buttons
-    if (order.status === 'Draft') {
+    if (order.status === 'Draft' && (activerole === 'manager' || activerole === 'admin')) {
       buttons.push(
         <Button
           key="submit"
@@ -129,7 +134,7 @@ const PurchaseOrdersTable = () => {
       )
     }
 
-    if (order.status === 'PendingApproval') {
+    if (order.status === 'PendingApproval' && activerole === 'admin') {
       buttons.push(
         <Button
           key="approve"
@@ -186,6 +191,8 @@ const PurchaseOrdersTable = () => {
           <div className="flex justify-between items-center w-full">
             <h2 className="text-xl font-semibold">Purchase Orders</h2>
             <div className="flex gap-2">
+              <Button size='sm' isIconOnly color='primary' variant={viewMode === 'table' ? 'solid' : 'flat'} onPress={() => setViewMode('table')} startContent={<TableOfContents size={18} />} />
+              <Button size='sm' isIconOnly color='primary' variant={viewMode === 'card' ? 'solid' : 'flat'} onPress={() => setViewMode('card')} startContent={<GridIcon size={18} />}/>
               <Button
                 variant="light"
                 startContent={<RefreshCw className="w-4 h-4" />}
@@ -262,146 +269,25 @@ const PurchaseOrdersTable = () => {
             </div>
           ) : (
             <>
-              {/* Desktop Table */}
-              {/* <div className="hidden md:block overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-medium">Order Number</th>
-                      <th className="text-left py-3 px-4 font-medium">Supplier</th>
-                      <th className="text-left py-3 px-4 font-medium">Warehouse</th>
-                      <th className="text-left py-3 px-4 font-medium">Status</th>
-                      <th className="text-left py-3 px-4 font-medium">Total Amount</th>
-                      <th className="text-left py-3 px-4 font-medium">Expected Delivery</th>
-                      <th className="text-left py-3 px-4 font-medium">Created</th>
-                      <th className="text-right py-3 px-4 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders.map((order) => (
-                      <tr key={order._id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4 font-medium text-primary">
-                          {order.orderNumber}
-                        </td>
-                        <td className="py-3 px-4">
-                          {order.supplierId?.name || 'N/A'}
-                        </td>
-                        <td className="py-3 px-4">
-                          {order.warehouseId?.name || 'N/A'}
-                        </td>
-                        <td className="py-3 px-4">
-                          <PurchaseOrderStatusBadge status={order.status} />
-                        </td>
-                        <td className="py-3 px-4 font-medium">
-                          {formatCurrency(order.totalAmount)}
-                        </td>
-                        <td className="py-3 px-4">
-                          {order.expectedDeliveryDate 
-                            ? formatDate(order.expectedDeliveryDate)
-                            : 'Not set'
-                          }
-                        </td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
-                          {formatDate(order.createdAt)}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex gap-1 justify-end">
-                            {getActionButtons(order)}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div> */}
-
-              {/* Mobile Cards */}
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {orders.map((order) => (
-                  <Card key={order._id} className="border dark:border-gray-700">
-                    <CardBody className="p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <p className="font-medium text-primary">{order.orderNumber}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{order.supplierId?.name}</p>
-                        </div>
-                        <PurchaseOrderStatusBadge status={order.status} />
-                      </div>
-                      
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Warehouse:</span>
-                          <span>{order.warehouseId?.name}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Amount:</span>
-                          <span className="font-medium">{formatCurrency(order.totalAmount, 'INR')}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Expected:</span>
-                          <span>
-                            {order.expectedDeliveryDate 
-                              ? formatDate(order.expectedDeliveryDate)
-                              : 'Not set'
-                            }
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2 mt-4 flex-wrap">
-                        {getActionButtons(order)}
-                      </div>
-                    </CardBody>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Pagination */}
-              {pagination && pagination.totalPages > 1 && (
-                <div className="flex justify-between items-center mt-6">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Showing {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} to {' '}
-                    {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of {' '}
-                    {pagination.totalItems} results
-                  </p>
-                  
-                  <div className="flex gap-2">
-                    <Button
-                      variant="flat"
-                      size="sm"
-                      onPress={() => handlePageChange(pagination.currentPage - 1)}
-                      isDisabled={!pagination.hasPrevPage}
-                    >
-                      Previous
-                    </Button>
-                    
-                    <div className="flex gap-1">
-                      {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                        const page = i + 1
-                        return (
-                          <Button
-                            key={page}
-                            variant={pagination.currentPage === page ? "solid" : "flat"}
-                            size="sm"
-                            onPress={() => handlePageChange(page)}
-                          >
-                            {page}
-                          </Button>
-                        )
-                      })}
-                    </div>
-                    
-                    <Button
-                      variant="flat"
-                      size="sm"
-                      onPress={() => handlePageChange(pagination.currentPage + 1)}
-                      isDisabled={!pagination.hasNextPage}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
+                {viewMode === 'table' ? (
+                  <PurchaseOrdersTableView
+                    orders={orders}
+                    isLoading={isLoading}
+                    pagination={pagination}
+                    onViewDetails={handleViewDetails}
+                    getActionButtons={getActionButtons}
+                    onPageChange={handlePageChange}
+                  />
+                ) : (
+                  <PurchaseOrdersCardView
+                    orders={orders}
+                    isLoading={isLoading}
+                    pagination={pagination}
+                    onViewDetails={handleViewDetails}
+                    getActionButtons={getActionButtons}
+                    onPageChange={handlePageChange}
+                  />
+                )}
             </>
           )}
         </CardBody>

@@ -10,6 +10,7 @@ import { useAddStock, useUpdateStock } from '@/libs/mutation/stock/stock-mutatio
 import StockTable from './_components/stock-table'
 import { useFetchStock } from '@/libs/query/stock/stock-query'
 import { useRouter } from 'next/navigation'
+import { StockSummary } from './_components/stock-summary'
 
 const StockPage = () => {
    const router = useRouter()
@@ -27,18 +28,19 @@ const StockPage = () => {
       minPrice: null,
       maxPrice: null,
       lowStock: false,
+      includeAnalytics: true,
    })
 
    const { data: stocks, isLoading: isLoading, refetch: handleRefresh } = useFetchStock({
       ...filter
    })
 
-      // Memoized computed values
+
+   // Memoized computed values
    const tableData = useMemo(() => stocks?.data || [], [stocks?.data]);
-   const summaryData = useMemo(() => stocks?.summary, [stocks?.summary]);
+   const summaryData = useMemo(() => stocks?.analytics?.summary, [stocks?.analytics?.summary]);
    const paginationData = useMemo(() => stocks?.pagination, [stocks?.pagination]);
 
-   // console.log("Fetched stocks:", stocks)
    
    
    const { isOpen, onOpen, onClose } = useDisclosure()
@@ -120,55 +122,23 @@ const StockPage = () => {
                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-               <Card>
-                  <CardBody>
-                  <div className="text-center">
-                     <h3 className="text-2xl font-bold text-green-600">0</h3>
-                     <p className="text-gray-600">Total Items</p>
-                  </div>
-                  </CardBody>
-               </Card>
-               <Card>
-                  <CardBody>
-                  <div className="text-center">
-                     <h3 className="text-2xl font-bold text-yellow-600">0</h3>
-                     <p className="text-gray-600">Low Stock</p>
-                  </div>
-                  </CardBody>
-               </Card>
-               <Card>
-                  <CardBody>
-                  <div className="text-center">
-                     <h3 className="text-2xl font-bold text-red-600">0</h3>
-                     <p className="text-gray-600">Out of Stock</p>
-                  </div>
-                  </CardBody>
-               </Card>
-            </div>
-
-            <Card>
-               <CardBody>
-                  <div className="space-y-4">
-                     
-                     {/* Example edit button for testing - remove this in production */}
-                     <StockTable 
-                        onEdit={handleEditStock}
-                        tableData={tableData}
-                        isLoading={isLoading}
-                        paginationData={paginationData}
-                        bulkSelection={bulkSelection}
-                        setBulkSelection={setBulkSelection}
-                        onRefresh={handleRefresh}
-                        onAddNew={handleCreateStock}
-                        onViewDetails={handleViewStockDetails}
-                        // onDelete={handleDeleteStock}
-                     />
-                     
-                     {/* Add your actual stock list/table here */}
-                  </div>
-               </CardBody>
+            <Card className='shadow-none border border-default-100'>
+               <StockTable 
+                  onEdit={handleEditStock}
+                  tableData={tableData}
+                  isLoading={isLoading}
+                  paginationData={paginationData}
+                  bulkSelection={bulkSelection}
+                  setBulkSelection={setBulkSelection}
+                  onRefresh={handleRefresh}
+                  onAddNew={handleCreateStock}
+                  onViewDetails={handleViewStockDetails}
+                  // onDelete={handleDeleteStock}
+               />
             </Card>
+            <div className="mt-5 shadow-none border-default p-4">
+               <StockSummary summaryData={summaryData} />
+            </div>
          </div>
       </PageAccess>
    )

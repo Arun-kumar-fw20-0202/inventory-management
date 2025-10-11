@@ -24,7 +24,6 @@ const SupplierCustomerAutocomplete = ({ onSelectChange={},userData={}, type='sup
       if(item){
          const selected = supplier?.data?.data?.find(s => s._id === item)
          userData(selected)
-         onSelectChange(item)
       }
    }
    
@@ -40,10 +39,10 @@ const SupplierCustomerAutocomplete = ({ onSelectChange={},userData={}, type='sup
                offset: 10,
             }}
             onInputChange={(e) => handleSearch(e)}
-            onSelectionChange={(item) => handleSelect(item)}
+            onSelectionChange={(item) => {handleSelect(item), onSelectChange(item)}}
          >
             {(item) => (
-               <AutocompleteItem key={item?._id} textValue={item?.name}>
+               <AutocompleteItem key={item?._id} textValue={item?.name} >
                   <div className="flex justify-between items-center">
                      <div className="flex gap-2 items-center">
                         <Avatar alt={item?.name} className="flex-shrink-0" size="sm" color='primary' src={item?.avatar} />

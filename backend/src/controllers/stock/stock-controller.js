@@ -848,6 +848,7 @@ const getAllStockController = async (req, res) => {
          sortOrder = 'desc',
          fields,
          includeAnalytics = false,
+         includeBreakdown= false,
          export: exportData = false
       } = req.query;
 
@@ -936,7 +937,22 @@ const getAllStockController = async (req, res) => {
                   }
                }
             ]),
-            // Category breakdown
+         ]);
+
+         responseData.analytics = {
+            summary: analytics[0][0] || {},
+         };
+
+         // Add profit analysis
+         if (responseData.analytics.summary.totalValue && responseData.analytics.summary.totalCost) {
+            responseData.analytics.summary.totalProfit = responseData.analytics.summary.totalValue - responseData.analytics.summary.totalCost;
+            responseData.analytics.summary.profitMargin = ((responseData.analytics.summary.totalProfit / responseData.analytics.summary.totalCost) * 100).toFixed(2);
+         }
+      }
+
+      if (includeBreakdown === 'true') {
+         // Fetch lightweight breakdowns for category and warehouse (no summary)
+         const [categoryBreakdown, warehouseBreakdown] = await Promise.all([
             StockModal.aggregate([
                { $match: filter },
                {
@@ -949,9 +965,27 @@ const getAllStockController = async (req, res) => {
                   }
                },
                { $sort: { count: -1 } },
-               { $limit: 10 }
+               { $limit: 10 },
+               {
+                 $lookup: {
+                   from: 'categories',
+                   localField: '_id',
+                   foreignField: '_id',
+                   as: 'categoryDoc'
+                 }
+               },
+               { $unwind: { path: '$categoryDoc', preserveNullAndEmptyArrays: true } },
+               {
+                 $project: {
+                   id: '$_id',
+                   label: { $ifNull: ['$categoryDoc.name', 'Unassigned'] },
+                   count: 1,
+                   totalQuantity: 1,
+                   totalValue: 1,
+                   averagePrice: 1
+                 }
+               }
             ]),
-            // Warehouse breakdown
             StockModal.aggregate([
                { $match: filter },
                {
@@ -963,23 +997,35 @@ const getAllStockController = async (req, res) => {
                   }
                },
                { $sort: { count: -1 } },
-               { $limit: 10 }
+               { $limit: 10 },
+               {
+                 $lookup: {
+                   from: 'warehouses',
+                   localField: '_id',
+                   foreignField: '_id',
+                   as: 'warehouseDoc'
+                 }
+               },
+               { $unwind: { path: '$warehouseDoc', preserveNullAndEmptyArrays: true } },
+               {
+                 $project: {
+                   id: '$_id',
+                   label: { $ifNull: ['$warehouseDoc.name', 'Unassigned'] },
+                   location: '$warehouseDoc.location',
+                   count: 1,
+                   totalQuantity: 1,
+                   totalValue: 1
+                 }
+               }
             ])
          ]);
 
-         responseData.analytics = {
-            summary: analytics[0][0] || {},
-            categoryBreakdown: analytics[1] || [],
-            warehouseBreakdown: analytics[2] || []
+         responseData.breakdown = {
+            categoryBreakdown: categoryBreakdown || [],
+            warehouseBreakdown: warehouseBreakdown || []
          };
-
-         // Add profit analysis
-         if (responseData.analytics.summary.totalValue && responseData.analytics.summary.totalCost) {
-            responseData.analytics.summary.totalProfit = responseData.analytics.summary.totalValue - responseData.analytics.summary.totalCost;
-            responseData.analytics.summary.profitMargin = ((responseData.analytics.summary.totalProfit / responseData.analytics.summary.totalCost) * 100).toFixed(2);
-         }
       }
-
+      
       // Cache the result if not exporting
       if (exportData !== 'true') {
          setCache(cacheKey, responseData, 1 * 60 * 1000); // Cache for 1 minute

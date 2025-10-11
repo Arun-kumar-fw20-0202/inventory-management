@@ -5,11 +5,13 @@ import { Input } from '@heroui/input'
 import { Select, SelectItem } from '@heroui/select'
 import { SearchIcon } from '@/components/icons'
 import { Card } from '@heroui/card'
-import { Inbox } from 'lucide-react'
+import { CardSimIcon, Grid3x3, Inbox, Table, Table2 } from 'lucide-react'
+import { Button } from '@heroui/button'
+import { Tooltip } from '@heroui/tooltip'
 
 const statuses = ['all','draft','submitted','approved','rejected','completed']
 
-const SaleFilters = ({ onChange }) => {
+const SaleFilters = ({ onChange, onChangeMode, mode }) => {
   const [search, setSearch] = React.useState('')
   const [status, setStatus] = React.useState('all')
   const [fromDate, setFromDate] = React.useState('')
@@ -40,11 +42,22 @@ const SaleFilters = ({ onChange }) => {
 
   return (
     <Card className="flex gap-3 p-6">
-      <div className="flex items-center gap-3">
-        <Inbox className="w-8 h-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold">All Transactions</h1>
-          <p className="text-gray-600">View all sales transactions</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex gap-3 items-center">
+          <Inbox className="w-8 h-8 text-primary" />
+          <div>
+            <h1 className="text-3xl font-bold">All Transactions</h1>
+            <p className="text-gray-600 dark:text-gray-400">View all sales transactions</p>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Tooltip content="Card View">
+            <Button color='primary' variant={mode == 'card' ? 'solid' : 'flat'} isIconOnly size='sm' startContent={<Grid3x3 />} onPress={() => onChangeMode('card')} />
+          </Tooltip>
+          <Tooltip content="Table View">
+            <Button color='primary' variant={mode == 'table' ? 'solid' : 'flat'} isIconOnly size='sm' startContent={<Table2 />} onPress={() => onChangeMode('table')} />
+          </Tooltip>
         </div>
       </div>
       <div className="flex gap-4">

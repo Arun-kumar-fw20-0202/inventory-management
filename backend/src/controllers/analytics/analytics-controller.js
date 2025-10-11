@@ -7,7 +7,7 @@ const { PurchaseOrderModal } = require('../../models/purchase-order/purchase-ord
 
 // Helper: build match stage using orgNo and optional date range
 function buildMatch(req) {
-    const orgNo = req.profile?.orgNo || req.query.orgNo
+    const orgNo = req.profile?.orgNo 
     const match = {}
     if (orgNo) match.orgNo = orgNo
 
@@ -193,7 +193,7 @@ const CustomerInsightsController = async (req, res) => {
 const InventoryTurnoverController = async (req, res) => {
     try {
         const { startDate, endDate } = req.query
-        const orgNo = req.profile?.orgNo || req.query.orgNo
+        const orgNo = req.profile?.orgNo 
 
         // COGS: unwind sale items and multiply quantity * purchasePrice (lookup)
         const saleMatch = { orgNo }
@@ -281,6 +281,88 @@ const ProfitMarginsController = async (req, res) => {
     }
 }
 
+// PurchaseOrderAnalyticsController
+const PurchaseOrderAnalyticsController = async (req, res) => {
+    try {
+        const orgNo = req.profile?.orgNo || req.query.orgNo
+        // allow missing orgNo on PurchaseOrder documents; we will attempt supplier-based scoping if needed
+        const { startDate, endDate, top = 10 } = req.query
+
+        const baseMatch = {}
+        if (startDate || endDate) {
+            baseMatch.createdAt = {}
+            if (startDate) baseMatch.createdAt.$gte = new Date(startDate)
+            if (endDate) baseMatch.createdAt.$lte = new Date(endDate)
+        }
+
+        // build pipeline; we will add supplier lookup filter if PurchaseOrder does not have orgNo path
+        const pipeline = []
+
+        // if PurchaseOrder has orgNo field, filter directly
+        const poHasOrg = !!PurchaseOrderModal.schema.path('orgNo')
+        if (poHasOrg && orgNo) baseMatch.orgNo = orgNo
+
+        // initial match (date range + possible orgNo)
+        if (Object.keys(baseMatch).length > 0) pipeline.push({ $match: baseMatch })
+
+        // if PO documents don't have orgNo, but we have orgNo in profile, scope via supplier lookup
+        if (!poHasOrg && orgNo) {
+            pipeline.push({ $lookup: { from: SupplierCustomer.collection.name, localField: 'supplierId', foreignField: '_id', as: '_supplier' } })
+            pipeline.push({ $unwind: { path: '$_supplier', preserveNullAndEmptyArrays: true } })
+            pipeline.push({ $match: { '_supplier.orgNo': orgNo } })
+        }
+
+        // facet to compute multiple KPIs in one pass
+        pipeline.push({
+            $facet: {
+                totals: [
+                    { $group: { _id: null, totalPOs: { $sum: 1 }, totalAmount: { $sum: { $ifNull: ['$totalAmount', 0] } }, avgAmount: { $avg: { $ifNull: ['$totalAmount', 0] } } } },
+                    { $project: { _id: 0, totalPOs: 1, totalAmount: 1, avgAmount: 1 } }
+                ],
+                statusCounts: [
+                    { $group: { _id: '$status', count: { $sum: 1 } } }
+                ],
+                topSuppliers: [
+                    { $group: { _id: '$supplierId', orders: { $sum: 1 }, amount: { $sum: { $ifNull: ['$totalAmount', 0] } } } },
+                    { $sort: { amount: -1 } },
+                    { $limit: parseInt(top, 10) },
+                    { $lookup: { from: SupplierCustomer.collection.name, localField: '_id', foreignField: '_id', as: 'supplier' } },
+                    { $unwind: { path: '$supplier', preserveNullAndEmptyArrays: true } },
+                    { $project: { supplierId: '$_id', orders: 1, amount: 1, supplier: { name: '$supplier.name', email: '$supplier.email', phone: '$supplier.phone' } } }
+                ],
+                pendingDeliveries: [
+                    { $match: { status: { $in: ['Approved', 'PartiallyReceived'] } } },
+                    { $project: { orderNumber: 1, supplierId: 1, expectedDeliveryDate: 1, totalAmount: 1, items: 1 } },
+                    { $sort: { expectedDeliveryDate: 1 } },
+                    { $limit: 20 },
+                    { $lookup: { from: SupplierCustomer.collection.name, localField: 'supplierId', foreignField: '_id', as: 'supplier' } },
+                    { $unwind: { path: '$supplier', preserveNullAndEmptyArrays: true } },
+                    { $project: { orderNumber: 1, expectedDeliveryDate: 1, totalAmount: 1, supplier: { name: '$supplier.name', phone: '$supplier.phone' }, items: 1 } }
+                ],
+                leadTime: [
+                    { $match: { expectedDeliveryDate: { $exists: true, $ne: null }, status: 'Completed' } },
+                    { $project: { diffDays: { $divide: [{ $subtract: ['$expectedDeliveryDate', '$createdAt'] }, 1000 * 60 * 60 * 24] } } },
+                    { $group: { _id: null, avgLeadTime: { $avg: '$diffDays' }, minLeadTime: { $min: '$diffDays' }, maxLeadTime: { $max: '$diffDays' } } },
+                    { $project: { _id: 0, avgLeadTime: 1, minLeadTime: 1, maxLeadTime: 1 } }
+                ]
+            }
+        })
+
+        const [result] = await PurchaseOrderModal.aggregate(pipeline).allowDiskUse(true)
+
+        const totals = (result?.totals && result.totals[0]) || { totalPOs: 0, totalAmount: 0, avgAmount: 0 }
+        const statusCounts = result?.statusCounts || []
+        const topSuppliers = result?.topSuppliers || []
+        const pendingDeliveries = result?.pendingDeliveries || []
+        const leadTime = (result?.leadTime && result.leadTime[0]) || { avgLeadTime: 0, minLeadTime: 0, maxLeadTime: 0 }
+
+        return success(res, 'Purchase order analytics', { totals, statusCounts, topSuppliers, pendingDeliveries, leadTime })
+    } catch (err) {
+        console.error('PurchaseOrderAnalyticsController error:', err)
+        return sendError(res, 'Could not fetch purchase order analytics', err)
+    }
+}
+
 module.exports = {
     SummeryController,
     RevenueTrendsController,
@@ -288,5 +370,6 @@ module.exports = {
     CustomerInsightsController,
     InventoryTurnoverController,
     SalesByRegionController,
-    ProfitMarginsController
+    PurchaseOrderAnalyticsController,
+    ProfitMarginsController,
 }

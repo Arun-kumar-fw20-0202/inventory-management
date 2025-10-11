@@ -1,10 +1,10 @@
 'use client'
-import SupplierCustomerAutocomplete from '@/components/dynamic/supplier-customer/supplier-customer-autocomplete'
 import WarehouseAutocomplete from '@/components/dynamic/warehouse/warehouse-autocomplete-'
+import SupplierCustomerAutocomplete from '@/components/dynamic/supplier-customer/supplier-customer-autocomplete'
 import PageAccess from '@/components/role-page-access'
 import { Button } from '@heroui/button'
 import { Textarea, Input } from '@heroui/input'
-import { PlusIcon } from 'lucide-react'
+import { Boxes, IndianRupee, PlusIcon } from 'lucide-react'
 import React from 'react'
 import { formatCurrency } from '@/libs/utils'
 import { useForm, Controller, useFieldArray, useWatch } from 'react-hook-form'
@@ -19,7 +19,7 @@ const Index = () => {
 
     const createPurchaseOrder = useCreatePurchaseOrder()
 
-    const { control, handleSubmit, setValue, getValues, formState: { errors } } = useForm({
+    const { control, handleSubmit, setValue, getValues, formState: { errors }, reset } = useForm({
         defaultValues: {
             supplierId: '',
             warehouseId: '',
@@ -47,7 +47,7 @@ const Index = () => {
             productName: product.productName || product.name,
             sku: product.sku,
             quantity: '',
-            unitPrice: ''
+            unitPrice: product.purchasePrice || 0,
         })
     }
 
@@ -112,17 +112,23 @@ const Index = () => {
         try {
             await createPurchaseOrder.mutateAsync(payload)
             // reset form
-            window.location.reload()
+            reset({
+                supplierId: '',
+                warehouseId: '',
+                expectedDeliveryDate: '',
+                notes: '',
+                items: [],
+                discountType: 'fixed',
+                discountValue: 0,
+                extraCharge: 0
+            })
+            // window.location.reload()
         } catch (err) {
             // handled by hook
         }
     }
     return (
-        <PageAccess allowedRoles={['superadmin', 'admin', 'manager']}>
-            <div className="p-6">
-                <h1 className="text-3xl font-bold">New Purchase Order</h1>
-                <p className="text-gray-600">This is the create order page.</p>
-            </div>
+        <PageAccess allowedRoles={['superadmin', 'admin', 'manager', 'staff']}>
             <SelectProductDrawr 
                 isOpen={isOpen}
                 onOpenChange={onOpenChange}
@@ -130,132 +136,144 @@ const Index = () => {
                 selectedProducts={fields || []}
                 onProductSelect={onProductSelect}
                 onProductRemove={onProductRemove}
-                onProductUpdate={onProductUpdate}
             />
-            
-            <div className='p-6 grid grid-cols-2 gap-4'>
-                {/* Autocomplete Components */}
-                <Controller
-                    control={control}
-                    name="supplierId"
-                    rules={{ required: 'Supplier is required' }}
-                    render={({ field }) => (
-                        <SupplierCustomerAutocomplete
-                            label="Select Supplier"
-                            type="supplier"
-                            variant='bordered'
-                            placeholder="Search and select a supplier"
-                            onSelectChange={(supplierId) => field.onChange(supplierId ? supplierId : '')}
-                            isInvalid={!!errors.supplierId}
-                            errorMessage={errors.supplierId && errors.supplierId.message}
-                        />
-                    )}
-                />
+            <div className="p-6">
+                <h1 className="text-3xl font-bold">New Purchase Order</h1>
+                <p className="text-gray-600">This is the create order page.</p>
 
-                <Controller
-                    control={control}
-                    name="warehouseId"
-                    rules={{ required: 'Warehouse is required' }}
-                    render={({ field }) => (
-                        <WarehouseAutocomplete
-                            label="Select Warehouse"
-                            variant='bordered'
-                            placeholder="Search and select a warehouse"
-                            onSelectChange={(warehouseId) => field.onChange(warehouseId ? warehouseId : '')}
-                            isInvalid={!!errors.warehouseId}
-                            errorMessage={errors.warehouseId && errors.warehouseId.message}
-                        />
-                    )}
-                />
-                {/* expectedDeliveryDate */}
-                <Controller control={control} name="expectedDeliveryDate" render={({ field }) => (
-                    <Input type='date' label="Expected Delivery Date" value={field.value || ''} onChange={(e) => field.onChange(e.target.value)} />
-                )} />
+                <Card className='mt-5 p-6 grid grid-cols-2 gap-4'>
+                    {/* Autocomplete Components */}
+                    <Controller
+                        control={control}
+                        name="supplierId"
+                        rules={{ required: 'Supplier is required' }}
+                        render={({ field }) => (
+                            <SupplierCustomerAutocomplete
+                                label="Select Supplier"
+                                type="supplier"
+                                variant='flat'
+                                defaultSelectedKey={field.value}
+                                key={field.value} 
+                                placeholder="Search and select a supplier"
+                                userData={(data) => field.onChange(data._id)}
+                                onSelectChange={(supplierId) => field.onChange(supplierId ? supplierId : '')}
+                                isInvalid={!!errors.supplierId}
+                                errorMessage={errors.supplierId && errors.supplierId.message}
+                            />
+                        )}
+                    />
 
-                <Button color="primary" size='lg' endContent={<PlusIcon />} onPress={onOpen}>
-                    Select Products 
-                </Button>
+                    <Controller
+                        control={control}
+                        name="warehouseId"
+                        rules={{ required: 'Warehouse is required' }}
+                        render={({ field }) => (
+                            <WarehouseAutocomplete
+                                label="Select Warehouse"
+                                variant='flat'
+                                defaultSelectedKey={field.value}
+                                key={field.value} 
+                                placeholder="Search and select a warehouse"
+                                onSelectChange={(warehouseId) => field.onChange(warehouseId ? warehouseId : '')}
+                                isInvalid={!!errors.warehouseId}
+                                errorMessage={errors.warehouseId && errors.warehouseId.message}
+                            />
+                        )}
+                    />
+                    {/* expectedDeliveryDate */}
+                    <Controller control={control} name="expectedDeliveryDate" render={({ field }) => (
+                        <Input type='date' label="Expected Delivery Date" value={field.value || ''} onChange={(e) => field.onChange(e.target.value)} />
+                    )} />
 
-                {/* Selected products preview */}
-                <div className="col-span-2">
-                    <h3 className="font-semibold mb-2">Selected Products</h3>
-                    {fields.length === 0 ? (
-                        <p className="text-sm text-gray-500">No products selected</p>
-                    ) : (
-                        <div className="space-y-2">
-                            {fields.map((p, index) => (
-                                <Card key={p.id} className="p-3 rounded flex-row flex items-center justify-between gap-3">
-                                    <div>
-                                        <div className="font-medium">{p.productName}</div>
-                                        <div className="text-sm text-gray-500">SKU: {p.sku}</div>
-                                    </div>
+                    <Button color="primary" endContent={<PlusIcon />} onPress={onOpen}>
+                        Select Products 
+                    </Button>
 
-                                    <div className="flex items-center gap-2">
-                                        <Controller
-                                            control={control}
-                                            name={`items.${index}.quantity`}
-                                            render={({ field }) => (
-                                                <Input type="number" variant='bordered' className="w-28" value={field.value?.toString() || ''} placeholder="Qty" onChange={(e) => field.onChange(e.target.value)} />
-                                            )}
-                                        />
+                    {/* Selected products preview */}
+                    <div className="col-span-2">
+                        <h3 className="font-semibold mb-2">Selected Products</h3>
+                        {fields.length === 0 ? (
+                            <div className="flex flex-col min-h-[300px] items-center justify-center border-2 border-default rounded-2xl">
+                                <Boxes size={48} className="text-gray-300"/>
+                                <p className="text-gray-500 dark:text-gray-400">No products selected. Click "Select Products" to add.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {fields.map((p, index) => (
+                                    <Card key={p.id} className="p-3 rounded flex-row flex items-center justify-between gap-3 shadow-none border border-default">
+                                        <div>
+                                            <div className="font-medium">{p.productName}</div>
+                                            <div className="text-sm text-gray-500 dark:text-gray-300">SKU: {p.sku}</div>
+                                        </div>
 
-                                        <Controller
-                                            control={control}
-                                            name={`items.${index}.unitPrice`}
-                                            render={({ field }) => (
-                                                <Input type="number" variant='bordered' className="w-36" value={field.value?.toString() || ''} placeholder="Unit Price" onChange={(e) => field.onChange(e.target.value)} />
-                                            )}
-                                        />
+                                        <div className="flex items-center gap-2">
+                                            <Controller
+                                                control={control}
+                                                name={`items.${index}.quantity`}
+                                                render={({ field }) => (
+                                                    <Input type="number" variant='bordered' className="w-28" value={field.value?.toString() || ''} placeholder="Qty" onChange={(e) => field.onChange(e.target.value)} />
+                                                )}
+                                            />
 
-                                        <Button color="danger" variant="light" onPress={() => remove(index)}>Remove</Button>
-                                    </div>
-                                </Card>
-                            ))}
+                                            <Controller
+                                                control={control}
+                                                name={`items.${index}.unitPrice`}
+                                                render={({ field }) => (
+                                                    <Input startContent={<IndianRupee size={18} />} isDisabled type="number" variant='bordered' className="w-36" value={field.value?.toString() || ''} placeholder="Unit Price" onChange={(e) => field.onChange(e.target.value)} />
+                                                )}
+                                            />
+
+                                            <Button color="danger" variant="light" onPress={() => remove(index)}>Remove</Button>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    
+
+                    {/* notes */}
+                    <Controller control={control} name="notes" render={({ field }) => (
+                        <Textarea label="Notes" placeholder="Enter any additional notes for the purchase order" value={field.value || ''} onChange={(e) => field.onChange(e.target.value)} />
+                    )} />
+                    {/* subtotal discount etc box */}
+                    <Card className="p-3 gap-4 bg-default-100 shadow-none">
+                        <form onSubmit={handleSubmit(onSubmit)}>
+                        <div className="flex justify-between">
+                            <p className="font-medium">Sub-total</p>
+                            <p className="font-semibold">{formatCurrency(calculateTotals()?.subTotal || 0)}</p>
                         </div>
-                    )}
-                </div>
-                
+                        <div className="flex gap-4 mt-2">
+                            <Controller control={control} name="discountType" render={({ field }) => (
+                                <Select {...field} variant='bordered' label='Discount Type'>
+                                    <SelectItem key='percent' value='percent'>%</SelectItem>
+                                    <SelectItem key='fixed' value='fixed'>Fixed</SelectItem>
+                                </Select>
+                            )} />
 
-                {/* notes */}
-                <Controller control={control} name="notes" render={({ field }) => (
-                    <Textarea label="Notes" placeholder="Enter any additional notes for the purchase order" value={field.value || ''} onChange={(e) => field.onChange(e.target.value)} />
-                )} />
-                {/* subtotal discount etc box */}
-                <Card className="p-2 gap-4">
-                    <form onSubmit={handleSubmit(onSubmit)}>
-                    <div className="flex justify-between">
-                        <p className="font-medium">Sub-total</p>
-                        <p className="font-semibold">{formatCurrency(calculateTotals()?.subTotal || 0)}</p>
-                    </div>
-                    <div className="flex gap-4 mt-2">
-                        <Controller control={control} name="discountType" render={({ field }) => (
-                            <Select {...field} variant='bordered' label='Discount Type'>
-                                <SelectItem key='percent' value='percent'>%</SelectItem>
-                                <SelectItem key='fixed' value='fixed'>Fixed</SelectItem>
-                            </Select>
-                        )} />
+                            <Controller control={control} name="discountValue" render={({ field }) => (
+                                <Input label='Discount' variant='bordered' type='number' value={field.value?.toString() || '0'} onChange={(e) => field.onChange(e.target.value)} />
+                            )} />
+                        </div>
+                        <div className="mt-2">
+                            <Controller control={control} name="extraCharge" render={({ field }) => (
+                                <Input label='Extra Charge' variant='bordered' type='number' value={field.value?.toString() || '0'} onChange={(e) => field.onChange(e.target.value)} />
+                            )} />
+                        </div>
 
-                        <Controller control={control} name="discountValue" render={({ field }) => (
-                            <Input label='Discount' variant='bordered' type='number' value={field.value?.toString() || '0'} onChange={(e) => field.onChange(e.target.value)} />
-                        )} />
-                    </div>
-                    <div className="mt-2">
-                        <Controller control={control} name="extraCharge" render={({ field }) => (
-                            <Input label='Extra Charge' variant='bordered' type='number' value={field.value?.toString() || '0'} onChange={(e) => field.onChange(e.target.value)} />
-                        )} />
-                    </div>
+                        <div className="flex justify-between mt-4">
+                            <p className="font-medium">Total</p>
+                            <p className="font-semibold">{formatCurrency(calculateTotals()?.total || 0)}</p>
+                        </div>
 
-                    <div className="flex justify-between mt-4">
-                        <p className="font-medium">Total</p>
-                        <p className="font-semibold">{formatCurrency(calculateTotals()?.total || 0)}</p>
-                    </div>
-
-                    <div className="mt-4">
-                        <Button type="submit" color="primary">Create Purchase Order</Button>
-                    </div>
-                    </form>
+                        <div className="mt-4">
+                            <Button type="submit" color="primary">Create Purchase Order</Button>
+                        </div>
+                        </form>
+                    </Card>
                 </Card>
             </div>
+            
 
         </PageAccess>
     )

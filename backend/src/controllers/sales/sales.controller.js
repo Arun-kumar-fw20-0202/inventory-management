@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const logger = require('../../utils/logger');
-const { success, error: sendError, notFound, forbidden } = require('../../utils/response');
+const { success, error: sendError, notFound, forbidden, error } = require('../../utils/response');
 
 const { StockModal } = require('../../models/stock/stock-scheema');
 const SupplierCustomer = require('../../models/supplier/supplier-customer-scheema');
@@ -13,7 +13,7 @@ const analyticsCache = new Map();
 const createSaleSale = async (req, res) => {
   try {
 
-    const { customerId, items = [], subTotal = 0, tax = 0,taxType, discount = 0,discountType, grandTotal = 0 } = req.body;
+    const { customerId, items = [], subTotal = 0, tax = 0,taxType, discount = 0,discountType, grandTotal = 0, invoiceNo } = req.body;
     const orgNo = req.profile.orgNo;
 
     if (!customerId) return sendError(res, 'customerId is required', 400);
@@ -46,6 +46,7 @@ const createSaleSale = async (req, res) => {
         discount,
         grandTotal,
         taxType,
+        invoiceNo: invoiceNo,
         discountType,
         createdBy: req.profile._id,
         orgNo
@@ -249,8 +250,6 @@ const GetSaleById = async (req, res) => {
       .lean();
     if (!sale) return notFound(res, 'Sale not found');
     // staff may only view own
-    if (req.profile.activerole === 'staff' && String(sale.createdBy) !== String(req.profile._id)) return forbidden(res, 'Forbidden');
-
     return success(res, 'Sale retrieved', sale);
   } catch (err) {
     logger.error('Get sale by id error', err);
@@ -275,6 +274,38 @@ const DeleteSale = async (req, res) => {
     return sendError(res, err.message || 'Internal server error');
   }
 };
+
+// 
+// Mark as paid
+const MarkOrderAsPaid = async (req, res) => {
+  try{
+    const { id } = req.params;
+    const { status='pending' } = req.query
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return error(res, 'Invalid purchase order ID', null, 400);
+    }
+    if (!['paid', 'partial', 'unpaid'].includes(status)) {
+      return error(res, 'Invalid payment status', null, 400);
+    }
+    const orgNo = req.profile.orgNo;
+    // udpate order status
+    const order = await SaleOrder.findOneAndUpdate(
+      { _id: id, orgNo },
+      { $set: { paymentStatus: status, markedAsPaidBy: req.profile._id } },
+      { new: true }
+    ).lean();
+
+    if (!order) {
+      return notFound(res, 'Sale order not found');
+    }
+    return success(res, 'Sale order payment status updated', order);
+  }
+  catch(err){
+    console.error('Mark order as paid error:', err);
+    return error(res, 'Failed to mark order as paid', err, 500);
+  }
+}
 
 // Analytics
 const GetSalesAnalytics = async (req, res) => {
@@ -327,6 +358,7 @@ module.exports = {
   ApproveSale,
   RejectSale,
   CompleteSale,
+  MarkOrderAsPaid,
   GetAllSales,
   GetSaleById,
   DeleteSale,

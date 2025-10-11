@@ -35,7 +35,7 @@ const StatusCard = ({ status, count, icon: Icon, color, bgColor }) => (
                     </div>
                     <div>
                         <p className="text-sm font-medium capitalize">{status}</p>
-                        <p className="text-xs text-gray-500">Orders</p>
+                        <p className="text-xs text-gray-500">Sales</p>
                     </div>
                 </div>
                 <div className="text-right">
@@ -93,12 +93,12 @@ const SummaryCards = ({ params }) => {
             {/* Main Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <Stat 
-                    title="Total Orders" 
+                    title="Total Sale" 
                     value={salesSummary.totalOrders || 0}
                     icon={ShoppingCart}
                     iconColor="text-blue-600"
                     bgColor="bg-blue-100"
-                    hint={"Total orders this period"}
+                    hint={"Total Sale this period"}
                 />
                 <Stat 
                     title="Revenue" 
@@ -117,7 +117,7 @@ const SummaryCards = ({ params }) => {
                     hint={"Total profit this period"}
                 />
                 <Stat 
-                    title="Avg Order Value" 
+                    title="Avg Sale Value" 
                     value={formatCurrency(salesSummary.avgOrderValue || 0)}
                     icon={Receipt}
                     iconColor="text-purple-600"
@@ -137,7 +137,7 @@ const SummaryCards = ({ params }) => {
             {/* Status Summary */}
             {statusCounts.length > 0 && (
                 <div>
-                    {/* <h3 className="text-lg font-semibold mb-4 text-gray-800">Order Status Summary</h3> */}
+                    <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-400">Sales Status Summary</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         {statusCounts.map((statusItem) => {
                             const config = getStatusConfig(statusItem._id)

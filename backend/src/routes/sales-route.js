@@ -1,6 +1,6 @@
 const SalesRouter = require('express').Router()
 
-const { createSaleSale, SubmitSale, ApproveSale, RejectSale, CompleteSale, GetAllSales, GetSalesAnalytics, GetSaleById, DeleteSale } = require('../controllers/sales/sales.controller');
+const { createSaleSale, SubmitSale, ApproveSale, RejectSale, CompleteSale, GetAllSales, GetSalesAnalytics, GetSaleById, DeleteSale, MarkOrderAsPaid } = require('../controllers/sales/sales.controller');
 const { RoleVerifyMiddleware } = require('../middleware/role-verify-middleware');
 
 // All routes assume RoleVerifyMiddleware populates req.profile
@@ -13,6 +13,8 @@ SalesRouter.get('/', RoleVerifyMiddleware('all'), GetAllSales);
 SalesRouter.get('/analytics', RoleVerifyMiddleware('all'), GetSalesAnalytics);
 SalesRouter.get('/:id', RoleVerifyMiddleware('all'), GetSaleById);
 SalesRouter.delete('/:id', RoleVerifyMiddleware('admin', 'manager'), DeleteSale);
+
+SalesRouter.patch('/:id/payment-status', RoleVerifyMiddleware('admin', 'manager'), MarkOrderAsPaid);
 
 module.exports = {
     SalesRouter

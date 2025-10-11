@@ -32,9 +32,9 @@ const ProfitMargins = ({ params = {} }) => {
       </CardHeader>
       <CardBody>
         <div className="space-y-2">
-          <div className="flex justify-between"><span>Total Revenue</span><span>{formatCurrency(payload.totalRevenue || 0)}</span></div>
-          <div className="flex justify-between"><span>Total COGS</span><span>{formatCurrency(payload.totalCOGS || 0)}</span></div>
-          <div className="flex justify-between font-bold"><span>Profit</span><span>{formatCurrency(payload.profit || 0)}</span></div>
+          <div className="flex justify-between text-danger"><span>Total Revenue</span><span>{formatCurrency(payload.totalRevenue || 0)}</span></div>
+          <div className="flex justify-between text-warning"><span>Total COGS</span><span>{formatCurrency(payload.totalCOGS || 0)}</span></div>
+          <div className="flex justify-between font-bold text-success"><span>Profit</span><span>{formatCurrency(payload.profit || 0)}</span></div>
           <div className="flex justify-between"><span>Margin</span><span>{(payload.margin || 0).toFixed?.(2) ?? payload.margin}%</span></div>
         </div>
       </CardBody>
