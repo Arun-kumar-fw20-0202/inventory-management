@@ -14,11 +14,12 @@ import {
 import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Info, Table } from "lucide-react";
-import { useCreateProductsCategory } from "@/libs/mutation/category/use-create-category";
+import { useCreateProductsCategory, useUpdateCategory } from "@/libs/mutation/category/use-create-category";
  
- export default function CreateProductCategoryModel({isOpen, onOpen, onOpenChange}) {
+export default function CreateProductCategoryModel({ isOpen, onOpen, onOpenChange, item = null }) {
 
-   const { mutate: CreateCategory, isPending: creating, isSuccess: created } = useCreateProductsCategory();
+   const { mutate: CreateCategory, isLoading: creating, isSuccess: created } = useCreateProductsCategory();
+   const { mutate: UpdateCategory, isLoading: updating, isSuccess: updated } = useUpdateCategory();
 
    const {
       control,
@@ -28,18 +29,31 @@ import { useCreateProductsCategory } from "@/libs/mutation/category/use-create-c
    } = useForm();
 
    const onCreateWherehouse = (data) => {
-      CreateCategory(data);
+      if (item && (item._id || item.id)) {
+         const id = item._id || item.id
+         UpdateCategory({ id, ...data })
+      } else {
+         CreateCategory(data)
+      }
    }
 
+   // Close/reset after create or update
    useEffect(() => {
-      if(created) {
-         onOpenChange();
-         resetFm({
-            name: "",
-            description: "",
-         });
+      if (created || updated) {
+         onOpenChange(false)
+         resetFm({ name: "", description: "" })
       }
-   }, [created]);
+   }, [created, updated])
+
+   // Prefill form when editing
+   useEffect(() => {
+      if (isOpen && item) {
+         resetFm({ name: item.name || '', description: item.description || '' })
+      }
+      if (!isOpen) {
+         resetFm({ name: '', description: '' })
+      }
+   }, [isOpen, item])
  
    return (
      <>

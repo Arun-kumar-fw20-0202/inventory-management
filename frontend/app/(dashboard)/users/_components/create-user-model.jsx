@@ -91,7 +91,8 @@ export default function CreateUserModal({
         if (mode === 'edit' && initialData && initialData._id) {
             const id = initialData._id
             // do not send empty password
-            const payload = { ...data }
+            const payload = { ...data, activerole: data.role }
+            console.log('payload', payload)
             if (!payload.password) delete payload.password
             updateUser({ id, data: payload })
         }

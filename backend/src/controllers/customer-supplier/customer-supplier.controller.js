@@ -1,7 +1,7 @@
 const SupplierCustomer = require('../../models/supplier/supplier-customer-scheema');
 const { success, error } = require('../../utils/response');
 const logger = require('../../utils/logger');
-
+const mongoose = require('mongoose');
 // ============================
 // GOD-LEVEL CACHING SYSTEM
 // ============================
@@ -78,6 +78,8 @@ const getAllSupplierCustomers = async (req, res) => {
          paymentTerms
       } = req.query;
 
+      console.log(req.query)
+
       // Build cache key
       const cacheKey = getCacheKey(orgNo, CACHE_KEYS.LIST, {
          page, limit, type, status, category, search, sortBy, sortOrder,
@@ -86,21 +88,25 @@ const getAllSupplierCustomers = async (req, res) => {
       });
 
       // Check cache
-      const cachedData = getCache(cacheKey);
-      if (cachedData) {
-         return success(res, 'Data retrieved successfully (cached)', cachedData);
-      }
+      // const cachedData = getCache(cacheKey);
+      // if (cachedData) {
+      //    return success(res, 'Data retrieved successfully (cached)', cachedData);
+      // }
 
       // Build match conditions
       const matchConditions = { orgNo };
 
       if (type) {
          if (type === 'both') {
-            matchConditions.type = 'both';
+            matchConditions.$or = [
+               { type: 'supplier' },
+               { type: 'customer' },
+               { type: 'both' }
+            ];
          } else {
             matchConditions.$or = [
                { type: type },
-               { type: 'both' }
+               // { type: 'both' }
             ];
          }
       }
@@ -180,12 +186,131 @@ const getAllSupplierCustomers = async (req, res) => {
       sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
       pipeline.push({ $sort: sortObj });
 
+      // If the requester is a staff member, compute per-staff totals for sales and purchases
+      // so the UI can show totals scoped to that staff user instead of global totals.
+      const isStaff = req.profile && req.profile.activeRole === 'staff';
+      const staffUserId = req.profile && req.profile._id;
+      if (isStaff && staffUserId) {
+         // Lookup sales created by this staff for each contact
+         pipeline.push({
+            $lookup: {
+               from: 'saleorders',
+               let: { contactId: '$_id' },
+               pipeline: [
+                  { $match: { $expr: { $and: [
+                     { $eq: ['$orgNo', orgNo] },
+                     { $eq: ['$customerId', '$$contactId'] },
+                     { $eq: ['$status', 'completed'] },
+                     { $eq: ['$createdBy', mongoose.Types.ObjectId(staffUserId)] }
+                  ] } } },
+                  { $group: { _id: null, totalSalesByUser: { $sum: '$grandTotal' }, lastSaleAmountByUser: { $max: '$grandTotal' }, salesOrdersCount: { $sum: 1 } } }
+               ],
+               as: 'userSalesSummary'
+            }
+         });
+
+         // Lookup purchase orders created by this staff for each contact
+         pipeline.push({
+            $lookup: {
+               from: 'purchaseorders',
+               let: { contactId: '$_id' },
+               pipeline: [
+                  { $match: { $expr: { $and: [
+                     { $eq: ['$orgNo', orgNo] },
+                     { $eq: ['$supplierId', '$$contactId'] },
+                     { $eq: ['$status', 'Completed'] },
+                     { $eq: ['$createdBy', mongoose.Types.ObjectId(staffUserId)] }
+                  ] } } },
+                  { $group: { _id: null, totalPurchasesByUser: { $sum: '$totalAmount' }, lastPurchaseAmountByUser: { $max: '$totalAmount' }, purchaseOrdersCount: { $sum: 1 } } }
+               ],
+               as: 'userPurchaseSummary'
+            }
+         });
+
+         // Extract values from the lookup results and override display fields when user-specific data exists
+         pipeline.push({
+            $addFields: {
+               lastSaleAmountComputed: { $ifNull: [ { $arrayElemAt: ['$userSalesSummary.lastSaleAmountByUser', 0] }, null ] },
+               totalSalesComputed: { $ifNull: [ { $arrayElemAt: ['$userSalesSummary.totalSalesByUser', 0] }, 0 ] },
+               salesOrdersCountComputed: { $ifNull: [ { $arrayElemAt: ['$userSalesSummary.salesOrdersCount', 0] }, 0 ] },
+
+               lastPurchaseAmountComputed: { $ifNull: [ { $arrayElemAt: ['$userPurchaseSummary.lastPurchaseAmountByUser', 0] }, null ] },
+               totalPurchasesComputed: { $ifNull: [ { $arrayElemAt: ['$userPurchaseSummary.totalPurchasesByUser', 0] }, 0 ] },
+               purchaseOrdersCountComputed: { $ifNull: [ { $arrayElemAt: ['$userPurchaseSummary.purchaseOrdersCount', 0] }, 0 ] }
+            }
+         });
+
+         pipeline.push({
+            $addFields: {
+               // Use computed values when staff actually has orders with this contact, otherwise fall back to stored values
+               lastSaleAmount: { $cond: [ { $gt: ['$salesOrdersCountComputed', 0] }, '$lastSaleAmountComputed', '$lastSaleAmount' ] },
+               lastPurchaseAmount: { $cond: [ { $gt: ['$purchaseOrdersCountComputed', 0] }, '$lastPurchaseAmountComputed', '$lastPurchaseAmount' ] },
+               totalSales: { $cond: [ { $gt: ['$salesOrdersCountComputed', 0] }, '$totalSalesComputed', '$totalSales' ] },
+               totalPurchases: { $cond: [ { $gt: ['$purchaseOrdersCountComputed', 0] }, '$totalPurchasesComputed', '$totalPurchases' ] },
+
+               'metrics.totalSalesOrders': { $cond: [ { $gt: ['$salesOrdersCountComputed', 0] }, '$salesOrdersCountComputed', '$metrics.totalSalesOrders' ] },
+               'metrics.totalPurchaseOrders': { $cond: [ { $gt: ['$purchaseOrdersCountComputed', 0] }, '$purchaseOrdersCountComputed', '$metrics.totalPurchaseOrders' ] }
+            }
+         });
+
+         // Recompute derived metrics.averageOrderValue using the user-scoped totals when possible
+         pipeline.push({
+            $addFields: {
+               metrics: {
+                  $let: {
+                     vars: {
+                        sTotal: { $ifNull: ['$totalSales', 0] },
+                        pTotal: { $ifNull: ['$totalPurchases', 0] },
+                        sCount: { $ifNull: ['$metrics.totalSalesOrders', 0] },
+                        pCount: { $ifNull: ['$metrics.totalPurchaseOrders', 0] }
+                     },
+                     in: {
+                        totalSalesOrders: '$$sCount',
+                        totalPurchaseOrders: '$$pCount',
+                        totalOrders: { $add: ['$$sCount', '$$pCount'] },
+                        averageOrderValue: {
+                           $cond: [ { $gt: [ { $add: ['$$sCount', '$$pCount'] }, 0 ] }, { $divide: [ { $add: ['$$sTotal', '$$pTotal'] }, { $add: ['$$sCount', '$$pCount'] } ] }, '$metrics.averageOrderValue' ]
+                        },
+                        onTimeDeliveryRate: '$metrics.onTimeDeliveryRate'
+                     }
+                  }
+               }
+            }
+         });
+      }
+
+      // Optional projection: allow client to request only specific fields via `fields` query param
+      // fields can be comma-separated list, e.g. fields=name,companyName,email
+      const { fields } = req.query;
+      let shouldProject = false;
+      let projectStage = {};
+      if (fields) {
+         // support array or comma-separated string
+         const fieldArray = Array.isArray(fields) ? fields : String(fields).split(',').map(f => f.trim()).filter(Boolean);
+         // if client specified '*' or 'all', skip projection
+         if (!(fieldArray.length === 1 && (fieldArray[0] === '*' || fieldArray[0] === 'all'))) {
+            shouldProject = true;
+            // always include _id by default
+            projectStage._id = 1;
+            fieldArray.forEach(f => {
+               if (f === 'id') f = '_id';
+               projectStage[f] = 1;
+            });
+            if (search && fieldArray.includes('searchScore')) projectStage.searchScore = { $meta: 'textScore' };
+         }
+      }
+
       // Count pipeline
       const countPipeline = [...pipeline, { $count: 'total' }];
 
       // Pagination
       const skip = (Number(page) - 1) * Number(limit);
       pipeline.push({ $skip: skip }, { $limit: Number(limit) });
+
+      // Apply projection if requested
+      if (shouldProject) {
+         pipeline.push({ $project: projectStage });
+      }
 
       // Execute queries in parallel
       const [data, totalResult] = await Promise.all([
@@ -526,11 +651,14 @@ const getAnalytics = async (req, res) => {
 
       const cacheKey = getCacheKey(orgNo, CACHE_KEYS.ANALYTICS, { type });
       const cachedData = getCache(cacheKey);
+      const filter = { orgNo };
+      
       
       if (cachedData) {
          return success(res, 'Analytics retrieved successfully (cached)', cachedData);
       }
-
+      const userId = req.profile.id;
+      const activerole = req.profile.activerole;
       const analytics = await SupplierCustomer.getAnalytics(orgNo, type);
 
       const result = {
@@ -539,7 +667,7 @@ const getAnalytics = async (req, res) => {
       };
 
       // Cache the result
-      setCache(cacheKey, result);
+      // setCache(cacheKey, result);
 
       success(res, 'Analytics retrieved successfully', result);
 

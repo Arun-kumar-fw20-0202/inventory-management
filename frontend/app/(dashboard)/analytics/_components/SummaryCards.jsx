@@ -1,25 +1,24 @@
 'use client'
 import React from 'react'
 import { Card, CardBody } from '@heroui/card'
-import { Chip } from '@heroui/chip'
 import { useFetchSummary } from '@/libs/mutation/analytics/analytics-mutations'
 import { formatCurrency } from '@/libs/utils'
-import { ShoppingCart, DollarSign, TrendingUp, Receipt, Users, IndianRupee, CheckCircle, Clock, XCircle, FileText, Edit } from 'lucide-react'
+import { ShoppingCart, TrendingUp, Receipt, Users, IndianRupee, CheckCircle, Clock, XCircle, FileText, Edit } from 'lucide-react'
 
 const Stat = ({ title, value, hint, icon: Icon, iconColor, bgColor }) => (
-    <Card className="hover:shadow-lg transition-shadow duration-300">
+    <Card className={`hover:shadow-lg transition-shadow duration-300 `}>
         <CardBody>
-            <div className="flex items-center gap-4 p-2">
-                <div className={`${bgColor} p-3 rounded-full mb-3`}>
-                    <Icon className={`w-6 h-6 ${iconColor}`} />
-                </div>
+            <div className="flex justify-between gap-4 p-2">
                 <div>
-                        <p className="text-sm text-gray-500 font-medium">{title}</p>
-                        <h2 className="text-2xl font-bold mt-2">{value}</h2>
+                    <p className={`text-sm ${iconColor} font-medium`}>{title}</p>
+                    <p className={`text-lg font-bold `}>{value}</p>
+                </div>
+                <div className={`${iconColor} ${bgColor} p-3 rounded-full mb-3`}>
+                    <Icon className={`w-6 h-6 ${iconColor}`} />
                 </div>
             </div>
                 {hint && (
-                        <p className="text-center text-xs text-gray-400 mt-2 italic">{hint}</p>
+                    <p className="text-center text-xs text-gray-400 mt-2 italic">{hint}</p>
                 )}
         </CardBody>
     </Card>
@@ -98,7 +97,7 @@ const SummaryCards = ({ params }) => {
                     icon={ShoppingCart}
                     iconColor="text-blue-600"
                     bgColor="bg-blue-100"
-                    hint={"Total Sale this period"}
+                    // hint={"Total Sale this period"}
                 />
                 <Stat 
                     title="Revenue" 
@@ -106,7 +105,7 @@ const SummaryCards = ({ params }) => {
                     icon={IndianRupee}
                     iconColor="text-green-600"
                     bgColor="bg-green-100"
-                    hint={"Total revenue this period"}
+                    // hint={"Total revenue this period"}
                 />
                 <Stat 
                     title="Total Profit" 
@@ -114,7 +113,7 @@ const SummaryCards = ({ params }) => {
                     icon={TrendingUp}
                     iconColor="text-emerald-600"
                     bgColor="bg-emerald-100"
-                    hint={"Total profit this period"}
+                    // hint={"Total profit this period"}
                 />
                 <Stat 
                     title="Avg Sale Value" 
@@ -122,12 +121,12 @@ const SummaryCards = ({ params }) => {
                     icon={Receipt}
                     iconColor="text-purple-600"
                     bgColor="bg-purple-100"
-                    hint={"Average order value this period"}
+                    // hint={"Average order value this period"}
                 />
                 <Stat 
                     title="Top Customers" 
                     value={payload.topCustomers?.[0]?.count || 0}
-                    hint="Top customers this period"
+                    // hint="Top customers this period"
                     icon={Users}
                     iconColor="text-orange-600"
                     bgColor="bg-orange-100"

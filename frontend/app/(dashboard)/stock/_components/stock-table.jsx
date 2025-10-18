@@ -7,8 +7,13 @@ import { Spinner } from '@heroui/spinner'
 import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/table'
 import { Chip } from '@heroui/chip'
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/dropdown'
-import { RefreshCcw, MoreVertical, Edit, Eye, Trash2, Plus } from 'lucide-react'
+import { RefreshCcw, MoreVertical, Edit, Eye, Trash2, Plus, SheetIcon } from 'lucide-react'
 import React from 'react'
+import { formatDateRelative } from '@/libs/utils'
+import BulkUploadModal from '@/components/BulkUploadModal'
+import BulkUploadResultsModal from '../../categories/_components/bulk-upload-results-modal'
+import { useDisclosure } from '@heroui/modal'
+import { Avatar } from '@heroui/avatar'
 
 // Column definitions
 const columns = [
@@ -17,10 +22,11 @@ const columns = [
    { name: "CATEGORY", uid: "category", sortable: true },
    { name: "WAREHOUSE", uid: "warehouse", sortable: true },
    { name: "QUANTITY", uid: "quantity", sortable: true },
-   { name: "UNIT", uid: "unit", sortable: false },
+   // { name: "UNIT", uid: "unit", sortable: false },
    { name: "PRICE", uid: "sellingPrice", sortable: true },
    { name: "TOTAL VALUE", uid: "totalValue", sortable: false },
    { name: "STATUS", uid: "stockStatus", sortable: false },
+   { name: "CREATEDAT", uid: "createdAt", sortable: false },
    { name: "ACTIONS", uid: "actions", sortable: false },
 ];
 
@@ -35,6 +41,7 @@ const StockTable = ({
    onViewDetails,
    onEdit,
    onDelete,
+   bottomContent,
 }) => {
 
    const renderCell = React.useCallback((item, columnKey) => {
@@ -45,7 +52,7 @@ const StockTable = ({
             return (
                <div className="flex flex-col text-nowrap">
                   <p className="text-bold text-sm capitalize">{item.productName}</p>
-                  <p className="text-bold text-xs capitalize text-gray-600 dark:text-gray-400 ">{item.description.substring(0, 30) || "No description"} {item?.description.length > 30 ? "..." : ""}</p>
+                  <p className="text-bold text-xs capitalize text-gray-600 dark:text-gray-300 ">{item.description.substring(0, 30) || "No description"} {item?.description.length > 30 ? "..." : ""}</p>
                </div>
             );
          case "sku":
@@ -57,21 +64,21 @@ const StockTable = ({
          case "category":
             return (
                <div className="flex flex-col text-nowrap">
-                  <p className="text-bold text-sm capitalize">{item?.category?.name}</p>
+                  <p className="text-bold text-sm capitalize">{item?.category?.name || <i className='text-danger text-xs font-semibold'>Category not found</i>}</p>
                </div>
             );
          case "warehouse":
             return (
                <div className="flex flex-col text-nowrap">
-                  <p className="text-bold text-sm capitalize">{item?.warehouse?.name}</p>
-                  {item?.warehouse?.location && <p className="text-xs text-gray-600 dark:text-gray-400">{item?.warehouse?.location}</p>}
+                  <p className="text-bold text-sm capitalize">{item?.warehouse?.name || <i className='text-danger text-xs font-semibold'>Warehouse not found</i>}</p>
+                  {item?.warehouse?.location && <p className="text-xs text-gray-600 dark:text-gray-300">{item?.warehouse?.location}</p>}
                </div>
             );
          case "quantity":
             return (
                <div className="flex flex-col text-nowrap">
                   <p className={`text-bold text-sm ${item.isLowStock ? 'text-danger' : 'text-success'}`}>
-                     {item.quantity}
+                     {item.quantity} {item.unit}
                   </p>
                   {item.isLowStock && <p className="text-xs text-danger">Low Stock</p>}
                </div>
@@ -86,14 +93,14 @@ const StockTable = ({
             return (
                <div className="flex flex-col text-nowrap">
                   <p className="text-bold text-sm">₹{item.sellingPrice}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Cost: ₹{item.purchasePrice}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">Cost: ₹{item.purchasePrice}</p>
                </div>
             );
          case "totalValue":
             return (
                <div className="flex flex-col text-nowrap">
                   <p className="text-bold text-sm text-success">₹{item.totalValue}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
                      Profit: ₹{((item.sellingPrice - item.purchasePrice) * item.quantity)}
                   </p>
                </div>
@@ -103,15 +110,31 @@ const StockTable = ({
                <Chip 
                   className="capitalize" 
                   color={
-                     item.stockStatus === 'inactive' ? 'danger' :
-                     item.stockStatus === 'lowstock' ? 'warning' : 'success'
+                     item.status === 'inactive' ? 'danger' :
+                     item.status === 'archived' ? 'warning' : 'success'
                   } 
                   size="sm" 
                   variant="flat"
                >
-                  {item.stockStatus}
+                  {item.status}
                </Chip>
             );
+
+         case "createdAt":
+            return (
+               <div className="flex flex-col text-nowrap">
+                  <div className="flex gap-2">
+                     <Avatar name={item?.createdBy?.name} className='h-6 w-6' />
+                     <div className="flex flex-col">
+                        <p className="text-bold text-sm">
+                           {item[columnKey] ? formatDateRelative(item[columnKey]) : 'N/A'}
+                        </p>
+                        <p className='text-xs'> By : {item?.createdBy?.name}</p>
+                     </div>
+                  </div>
+               </div>
+            );
+            
          case "actions":
             return (
                <div className="relative flex justify-end items-center gap-2">
@@ -146,16 +169,26 @@ const StockTable = ({
       }
    }, [onViewDetails, onEdit, onDelete]);
 
+
+   const {isOpen: isUploadOpen, onOpen: onUploadOpen, onOpenChange: onUploadOpenChange} = useDisclosure();
+   const {isOpen: isResultsOpen, onOpen: onResultsOpen, onOpenChange: onResultsOpenChange} = useDisclosure();
+   const [lastJobId, setLastJobId] = React.useState(null)
+
+
    
    return (
       <>
+         <BulkUploadModal type="stock" isOpen={isUploadOpen} onOpenChange={onUploadOpenChange} onComplete={(jobId) => { setLastJobId(jobId); onResultsOpenChange(false); }} />
+         <BulkUploadResultsModal jobId={lastJobId} isOpen={isResultsOpen} onOpenChange={onResultsOpenChange} />
+
          <Table
             aria-label="Enhanced stock table"
             isHeaderSticky
-            isStriped
+            isStriped={true}
+            bottomContent={bottomContent && bottomContent()}
             shadow='none'
             selectionMode="multiple"
-            onSelectionChange={setBulkSelection}
+            // onSelectionChange={setBulkSelection}
             topContent={
                <div className="flex flex-wrap gap-3 sticky left-0 justify-between items-center">
                   <div>
@@ -166,19 +199,10 @@ const StockTable = ({
                         </p>
                      )}
                   </div>
-                  <div className="flex gap-2">
-                     <Button 
-                        size='sm'
-                        variant="flat" 
-                        onPress={onRefresh}
-                        isLoading={isLoading}
-                        startContent={<RefreshCcw size={16} />}
-                     >
-                        Refresh
-                     </Button>
-                     <Button onPress={onAddNew} color='primary' variant='flat' size='sm' startContent={<Plus className="w-4 h-4" />}>
-                        Add New Stock
-                     </Button>
+                  <div className="flex flex-wrap gap-2">
+                     <Button size='sm' variant="flat"  onPress={onRefresh} isLoading={isLoading} startContent={<RefreshCcw size={16} />}>Refresh</Button>
+                     <Button onPress={onAddNew} color='primary' variant='flat' size='sm' startContent={<Plus className="w-4 h-4" />}>Add New Stock</Button>
+                     <Button onPress={onUploadOpen} color='success' variant='flat' size='sm' startContent={<SheetIcon className="w-4 h-4" />}>Bulk Upload</Button>
                   </div>
                </div>
             }
@@ -207,7 +231,9 @@ const StockTable = ({
                loadingContent={<Spinner size="lg" />}
             >
                {(item) => (
-                  <TableRow key={item._id}>
+                  <TableRow key={item._id} className={
+                     item?.lowStockThreshold >= item?.quantity && 'bg-danger/5 text-danger'
+                  }>
                      {(columnKey) => (
                         <TableCell>{renderCell(item, columnKey)}</TableCell>
                      )}

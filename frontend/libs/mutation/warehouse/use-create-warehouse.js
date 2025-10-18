@@ -32,3 +32,41 @@ export const usecreateWarehouse = () => {
 
    return mutate;
 };
+
+export const useUpdateWarehouse = () => {
+   const queryClient = useQueryClient();
+   const mutate = useMutation({
+      mutationFn: async (data) => {
+         const response = await api.patch("/warehouse/update", data);
+         return response.data;
+      },
+      onSuccess: (data) => {
+         queryClient.invalidateQueries("warehouses");
+         console.log('Update success data:', data); // Debugging line
+         toast.success(data?.message?.message || 'Warehouse updated successfully');
+      },
+      onError: (error) => {
+         toast.error(error?.response?.data?.message);
+      },
+   });
+   return mutate;
+}
+
+export const useDeleteWarehouse = () => {
+   const queryClient = useQueryClient();
+   const mutate = useMutation({
+      mutationFn: async (data) => {
+         const response = await api.post("/warehouse/delete", data);
+         return response.data;
+      },
+      onSuccess: (data) => {
+         console.log('Delete success data:', data); // Debugging line
+         queryClient.invalidateQueries("warehouses");
+         toast.success(data.message.message || 'Warehouse(s) deleted successfully');
+      },
+      onError: (error) => {
+         toast.error(error?.response?.data?.message);
+      },
+   });
+   return mutate;
+}

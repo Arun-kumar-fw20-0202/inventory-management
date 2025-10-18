@@ -17,17 +17,22 @@ import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import MobileSideBar from './mobile-sidebr';
 
-import { Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Menu, X, ChevronLeft, ChevronRight, Bell } from 'lucide-react';
 import { PrintMenues, SidebrProfile } from './print-menues';
 import { useDisclosure } from '@heroui/modal';
+import { NotificationDrawer } from '../dynamic/notifications/notification-drawer';
+import { Badge } from '@heroui/badge';
+import { NotificationIcon } from '../icons';
 
 export const Sidebar = ({ children }) => {
   const user = useSelector((state) => state.auth.user);
+  const permissions = useSelector((state) => state.permissions?.permissions)
+  const { isOpen: isOpenNotification, onOpen: onOpenNotification, onOpenChange: onOpenChangeNotification } = useDisclosure();
   const organisation = useSelector((state) => state?.organisation?.organisation?.organisation);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // console.log("Organisation in Sidebar:", organisation); // Debugging line
-  const menuList = getMenuList(user?.data?.activerole);
+  const menuList = getMenuList(user?.data?.activerole, permissions);
 
   // console.log("Menu List:", menuList); // Debugging line
   
@@ -53,23 +58,47 @@ export const Sidebar = ({ children }) => {
   );
 
 
+  const [notificationCount, setNotificationCount] = useState(0);
   return (
     <>
       <div className="flex h-screen w-full flex-row">
         {/* Sidebar */}
+        <NotificationDrawer 
+          isOpen={isOpenNotification}
+          onOpen={onOpenNotification}
+          count={(count) => setNotificationCount(count)}
+          onOpenChange={onOpenChangeNotification}
+        />
         <Card className={`z-[20] w-[${isCollapsed ? '40px' : '260px'}] rounded-none md:flex flex-col justify-between md:border-r border-none border-gray-300 shadow-md ${!isCollapsed ? 'md:p-4' : 'md:p-1'} hidden p-0 h-screen transition-all`}>
+          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-1`}>
+            <Button className='' isIconOnly size="sm" variant="flat" onPress={() => setIsCollapsed(prev => !prev)} aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+              {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            </Button>
+            {!isCollapsed && (
+              <div className='cursor-pointer' onClick={onOpenNotification}>
+                <Badge color="danger" content={notificationCount} shape="circle">
+                  <NotificationIcon className="fill-current" size={30} />
+                </Badge>
+              </div>
+            )}
+          </div>
         
-          <div className="flex items-center justify-center w-full">
+          {/* <div className="flex items-center justify-center w-full">
             <div className="flex gap-2 items-center">
               <BrandLog />
-              <Button className='absolute -right-2' isIconOnly size="sm" variant="flat" onPress={() => setIsCollapsed(prev => !prev)} aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-                {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-              </Button>
+              
             </div>
-          </div>
+          </div> */}
           {/* Sidebar Header (Brand + Toggle shown above) */}
           {/* Sidebar Menu */}
           <nav className={`flex-1 mt-3 overflow-y-auto flex ${isCollapsed && 'px-2'} flex-col overflow-x-hidden gap-2`}>
+            {isCollapsed && (
+              <div className='cursor-pointer' onClick={onOpenNotification}>
+                <Badge color="danger" content={notificationCount} shape="circle">
+                  <NotificationIcon className="fill-current" size={30} />
+                </Badge>
+              </div>
+            )}
             <PrintMenues menuList={menuList} onOpenChange={() => {}} collapsed={isCollapsed} />
           </nav>
 
@@ -86,15 +115,28 @@ export const Sidebar = ({ children }) => {
 
 
         {/* Main Content */}
-        <div className="relative flex-1 overflow-y-auto ">
+        {/* <div className="relative flex-1 overflow-y-auto bg-gradient-to-br from-default-50 to-default-100"> */}
+        <div className="relative flex-1 overflow-y-auto">
           {/* <section className="h-full w-full absolute front-section before:bg-secondary before:bg-opacity-30"></section> */}
           {/* <section className='absolute inset-0 h-full w-full bg-secondary dark:bg-gray-900'></section> */}
           {/* hamburger menu */}
           <Card className="rounded-none p-2 w-full flex md:hidden">
             <div className="flex items-center gap-3">
               {!isOpen ? <Menu onClick={onOpenChange} size={30} /> : <X onClick={onOpenChange} size={30} />}
-              <p className='text-2xl'>{user?.data?.name}</p>
-              <Chip className='text-sm' color="primary">{user?.data?.activerole}</Chip>
+              <div className="flex justify-between w-full">
+                <div>
+                  <p className='text-2xl'>{user?.data?.name}</p>
+                  <Chip className='text-sm rounded-md' size='sm' color="primary">{user?.data?.activerole}</Chip>
+
+                </div>
+                <div className="flex justify-between items-center gap-2">
+                  <div className='cursor-pointer p-2' onClick={onOpenNotification}>
+                    <Badge color="danger" content={notificationCount} shape="circle">
+                      <NotificationIcon className="fill-current" size={30} />
+                    </Badge>
+                  </div>
+                </div>
+              </div>
             </div>
           </Card>
           {children}

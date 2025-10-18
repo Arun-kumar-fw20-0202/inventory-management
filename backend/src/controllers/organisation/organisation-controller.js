@@ -112,17 +112,14 @@ const getMyOrganisation = async (req, res) => {
 const updateOrganisation = async (req, res) => {
 	try {
 		const requester = req.profile
-		const { id } = requester
+		const { id, orgNo } = requester
 		const update = req.body || {}
 
-		console.log('updateOrganisation body:', req.body)
-
-		const org = await OrganizationModal.findOne({ userId: id })
-		console.log(org)
+		const org = await OrganizationModal.findOne({ orgNo: orgNo })
 		if (!org) return notFound(res, 'Organisation')
 
 		// Permission: only superadmin or owner (userId) can update
-		if (requester?.activerole !== 'superadmin' && String(org.userId) !== String(requester._id)) {
+		if (requester?.activerole !== 'superadmin' && String(org.orgNo) !== String(requester.orgNo)) {
 			return forbidden(res, 'Not authorized to update this organisation')
 		}
 

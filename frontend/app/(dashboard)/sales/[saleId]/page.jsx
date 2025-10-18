@@ -1,6 +1,6 @@
 'use client'
-import { useFetchSaleById } from '@/libs/mutation/sales/sales-mutations'
-import React from 'react'
+import { useFetchSaleById, useApproveSale, useCompleteSale, useRejectSale, useSubmitSale, useUpdatePaymentStatus } from '@/libs/mutation/sales/sales-mutations'
+import React, { useCallback, useMemo } from 'react'
 import { Package, User, Calendar, DollarSign, CheckCircle, Clock, AlertCircle } from 'lucide-react'
 import { Card } from '@heroui/card'
 import { Button } from '@heroui/button'
@@ -8,10 +8,16 @@ import PageAccess from '@/components/role-page-access'
 import { useSelector } from 'react-redux'
 import { InvoiceFormatter } from '@/components/invoice'
 import { Modal, ModalBody, ModalContent, ModalHeader, useDisclosure } from '@heroui/modal'
+import toast from 'react-hot-toast'
+import { Radio, RadioGroup } from '@heroui/radio'
+import {Alert} from "@heroui/alert";
+import ConfirmActionModal from '@/app/(dashboard)/sales/all/_components/ConfirmActionModal'
+import { formatDateRelative } from '@/libs/utils'
+import { Chip } from '@heroui/chip'
 
 const Index = (saleId) => {
   const id = saleId?.params?.saleId
-  const { data: saleData, isLoading, error } = useFetchSaleById(id)
+  const { data: saleData, isLoading, error, refetch } = useFetchSaleById(id)
   const {isOpen, onOpen, onOpenChange} = useDisclosure()
 
   if (isLoading) {
@@ -22,9 +28,7 @@ const Index = (saleId) => {
     return <ErrorState error={error} />
   }
 
-  if (!saleData?.data) {
-    return <EmptyState />
-  }
+  if (!saleData?.data && !id) return <EmptyState />
 
   const sale = saleData.data
 
@@ -38,7 +42,14 @@ const Index = (saleId) => {
             sale={sale}
           />
           {/* Header */}
-          <Header sale={sale} onOpenChange={onOpenChange} />
+          <Header sale={sale} onOpenChange={onOpenChange} refetch={refetch} />
+
+          {/* {sale?.rejectedReason && (
+            <Alert color='danger' description={`Reason : ${sale?.rejectedReason}`} title={<p>The sale was rejected <b>{`( ${formatDateRelative(sale?.rejectedAt)} )`}</b> and Rejected By <b>{user?.data?.id == sale?.rejectedBy?._id ? "( You )" : sale?.rejectedBy?.name}</b></p>} />
+          )} */}
+          <Card>
+            <AllAlertBoxs sale={sale} />
+          </Card>
 
           {/* Status Cards */}
           <StatusCards sale={sale} />
@@ -60,23 +71,229 @@ const Index = (saleId) => {
   )
 }
 
-const Header = ({ sale, onOpenChange }) => (
-  <Card className="rounded-lg shadow-sm border border-default p-6">
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <div>
-        <h1 className="text-3xl font-bold ">{sale.orderNo}</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Organization: {sale.orgNo}</p>
+const AllAlertBoxs = ({ sale }) => {
+  const user = useSelector((state) => state.auth.user)
+
+  if (!sale) return null
+
+  const me = user?.data?.id
+  const whoName = (person) => {
+    if (!person) return '—'
+    if (person._id && person._id === me) return `${person.name} (You)`
+    return person.name || '—'
+  }
+
+  // Rejected (highest priority)
+  if (sale.rejectedReason) {
+    const rejectedBy = sale.rejectedBy || {}
+    return (
+      <Alert
+        color="danger"
+        title={<div className="font-semibold">Sale Rejected — {formatDateRelative(sale.rejectedAt)}</div>}
+        description={
+          <div className="space-y-1">
+            <p className="text-sm">This sale was rejected by <b>{whoName(rejectedBy)}</b>.</p>
+            <p className="text-sm">Reason: <span className="font-medium">{sale.rejectedReason}</span></p>
+            <p className="text-sm text-default-400">If this rejection looks incorrect, please contact your organisation admin to review the decision.</p>
+          </div>
+        }
+      />
+    )
+  }
+
+  // Completed
+  if (sale.status === 'completed') {
+    const completedBy = sale.completedBy || {}
+    return (
+      <Alert
+        color="success"
+        title={<div className="font-semibold">Sale Completed — {formatDateRelative(sale.completedAt)}</div>}
+        description={
+          <div className="space-y-1">
+            <p className="text-sm">Marked completed by <b>{whoName(completedBy)}</b>.</p>
+            <p className="text-sm">Current payment status: <b>{sale.paymentStatus}</b>. Please reconcile payments and update the status if required.</p>
+          </div>
+        }
+      />
+    )
+  }
+
+  // Approved
+  if (sale.status === 'approved') {
+    const approvedBy = sale.approvedBy || {}
+    return (
+      <Alert
+        color="success"
+        title={<div className="font-semibold">Sale Approved — {formatDateRelative(sale.approvedAt)}</div>}
+        description={
+          <div className="space-y-1">
+            <p className="text-sm">This sale was approved by <b>{whoName(approvedBy)}</b>. You can now proceed to complete the sale.</p>
+            <p className="text-sm text-default-400">Payment status: <b>{sale.paymentStatus}</b>.</p>
+          </div>
+        }
+      />
+    )
+  }
+
+  // Submitted
+  if (sale.status === 'submitted') {
+    const submittedBy = sale.submittedBy || sale.createdBy || {}
+    return (
+      <Alert
+        color="warning"
+        title={<div className="font-semibold">Sale Submitted — {formatDateRelative(sale.submittedAt)}</div>}
+        description={
+          <div className="space-y-1">
+            <p className="text-sm">Submitted by <b>{whoName(submittedBy)}</b>. The sale is awaiting approval from authorised personnel.</p>
+            <p className="text-sm text-default-400">You will be notified once the sale is reviewed.</p>
+          </div>
+        }
+      />
+    )
+  }
+
+  // Draft
+  if (sale.status === 'draft') {
+    const creator = sale.createdBy || {}
+    return (
+      <Alert
+        title={<div className="font-semibold">Draft Sale</div>}
+        description={<div className="space-y-1"><p className="text-sm">This sale is currently a draft created by <b>{whoName(creator)}</b>. Submit when ready for review.</p></div>}
+      />
+    )
+  }
+
+  return null
+}
+
+
+const Header = ({ sale, onOpenChange, refetch }) => {
+  const user = useSelector((state) => state.auth.user)
+
+  // use mutation's async helpers for predictable flow
+  const { mutateAsync: submitAsync, isPending: submetting } = useSubmitSale()
+  const { mutateAsync: approveAsync, isPending: approving } = useApproveSale()
+  const { mutateAsync: rejectAsync, isPending: rejecting } = useRejectSale()
+  const { mutateAsync: completeAsync, isPending: completing } = useCompleteSale()
+
+  const canApproveOrReject = useMemo(() => user?.data?.activerole !== 'staff', [user])
+
+  const handleSubmit = useCallback(async () => {
+    if (submetting) return
+    // open confirmation modal
+    setConfirmTitle('Submit sale')
+    setConfirmMessage('Submit this sale for approval?')
+    setConfirmShowReason(false)
+    setConfirmPayload({ action: 'submit' })
+    setConfirmOpen(true)
+  }, [sale?._id, submitAsync, submetting, refetch])
+
+  const handleApprove = useCallback(async () => {
+    if (approving) return
+    setConfirmTitle('Approve sale')
+    setConfirmMessage('Approve this sale?')
+    setConfirmShowReason(false)
+    setConfirmPayload({ action: 'approve' })
+    setConfirmOpen(true)
+  }, [sale?._id, approveAsync, approving, refetch])
+
+  const handleReject = useCallback(async () => {
+    if (rejecting) return
+    // ask for optional reason via modal
+    setConfirmTitle('Reject sale')
+    setConfirmMessage('Please provide a reason for rejection (optional)')
+    setConfirmShowReason(true)
+    setConfirmPayload({ action: 'reject' })
+    setConfirmOpen(true)
+  }, [sale?._id, rejectAsync, rejecting, refetch])
+
+  const handleComplete = useCallback(async () => {
+    if (completing) return
+    setConfirmTitle('Complete sale')
+    setConfirmMessage('Mark this sale as completed?')
+    setConfirmShowReason(false)
+    setConfirmPayload({ action: 'complete' })
+    setConfirmOpen(true)
+  }, [sale?._id, completeAsync, completing, refetch])
+
+  // Confirm modal state and handler
+  const [confirmOpen, setConfirmOpen] = React.useState(false)
+  const [confirmTitle, setConfirmTitle] = React.useState('')
+  const [confirmMessage, setConfirmMessage] = React.useState('')
+  const [confirmShowReason, setConfirmShowReason] = React.useState(false)
+  const [confirmPayload, setConfirmPayload] = React.useState(null)
+
+  const handleConfirm = React.useCallback(async (reason) => {
+    if (!confirmPayload || !confirmPayload.action) {
+      setConfirmOpen(false)
+      return
+    }
+    try {
+      if (confirmPayload.action === 'submit') {
+        await submitAsync(sale._id)
+      } else if (confirmPayload.action === 'approve') {
+        await approveAsync(sale._id)
+      } else if (confirmPayload.action === 'reject') {
+        await rejectAsync({ id: sale._id, reason: reason || '' })
+      } else if (confirmPayload.action === 'complete') {
+        await completeAsync(sale._id)
+      }
+      refetch?.()
+    } catch (err) {
+      toast.error(err?.message || 'Action failed')
+    } finally {
+      setConfirmOpen(false)
+      setConfirmPayload(null)
+    }
+  }, [confirmPayload, submitAsync, approveAsync, rejectAsync, completeAsync, sale?._id, refetch])
+
+  return (
+    <Card className="rounded-lg shadow-sm border border-default p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold ">{sale?.invoiceNo}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-300 mt-1">#Order Id : {sale.orderNo}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <StatusBadge status={sale.status} />
+          <PaymentBadge status={sale.paymentStatus} />
+
+          {/* Action buttons: show based on status and role */}
+          {sale.status === 'draft' && (
+            <Button size="sm" color="secondary" onPress={handleSubmit} disabled={submetting}> {submetting ? 'Submitting...' : 'Submit'} </Button>
+          )}
+
+          {sale.status === 'submitted' && canApproveOrReject && (
+            <>
+              <Button size="sm" color="primary" onPress={handleApprove} disabled={approving}>{approving ? 'Approving...' : 'Approve'}</Button>
+              <Button size="sm" color="danger" variant="solid" onPress={handleReject} disabled={rejecting}>{rejecting ? 'Rejecting...' : 'Reject'}</Button>
+            </>
+          )}
+
+          {sale.status === 'approved' && canApproveOrReject && (
+            <Button size="sm" color="success" onPress={handleComplete} disabled={completing}>{completing ? 'Completing...' : 'Complete'}</Button>
+          )}
+
+          {sale?.status == 'completed' && (
+            <Button size="sm" variant="flat" onPress={onOpenChange}>
+              View as #Invoice
+            </Button>
+          )}
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        <StatusBadge status={sale.status} />
-        <PaymentBadge status={sale.paymentStatus} />
-        <Button size="sm" variant="flat" onPress={onOpenChange}>
-          View as #Invoice
-        </Button>
-      </div>
-    </div>
-  </Card>
-)
+
+      {/* Confirmation modal for submit/approve/reject/complete actions */}
+      <ConfirmActionModal
+        open={confirmOpen}
+        title={confirmTitle}
+        message={confirmMessage}
+        showReason={confirmShowReason}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={handleConfirm}
+      />
+    </Card>
+  )
+}
 
 const StatusCards = ({ sale }) => (
   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -111,7 +328,7 @@ const StatCard = ({ icon, label, value, bgColor, iconColor }) => (
         {icon}
       </div>
       <div>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-300">{label}</p>
         <p className="text-2xl font-bold ">{value}</p>
       </div>
     </div>
@@ -142,7 +359,7 @@ const CustomerInfo = ({ customer }) => (
 
 const InfoItem = ({ label, value, fullWidth }) => (
   <div className={fullWidth ? "md:col-span-2" : ""}>
-    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+    <p className="text-sm text-gray-500 dark:text-gray-300 mb-1">{label}</p>
     <p className="text-base  font-medium">{value}</p>
   </div>
 )
@@ -156,11 +373,11 @@ const ItemsTable = ({ items }) => (
       <table className="w-full">
         <thead className="border-b border-default">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Product</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">SKU</th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quantity</th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Price</th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Product</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">SKU</th>
+            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quantity</th>
+            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Price</th>
+            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
@@ -169,7 +386,7 @@ const ItemsTable = ({ items }) => (
               <td className="px-6 py-4">
                 <div>
                   <p className="text-sm font-medium ">{item.stockId.productName}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{item.stockId.description}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-300">{item.stockId.description}</p>
                 </div>
               </td>
               <td className="px-6 py-4 text-sm ">{item.stockId.sku}</td>
@@ -211,7 +428,7 @@ const PaymentSummary = ({ sale }) => (
 
 const SummaryRow = ({ label, value, isNegative, isTotal }) => (
   <div className="flex justify-between items-center">
-    <span className={`${isTotal ? 'text-lg font-semibold' : 'text-sm'} text-gray-600 dark:text-gray-400`}>
+    <span className={`${isTotal ? 'text-lg font-semibold' : 'text-sm'} text-gray-600 dark:text-gray-300`}>
       {label}
     </span>
     <span className={`${isTotal ? 'text-xl font-bold' : 'text-sm font-medium'} ${isNegative ? 'text-red-600' : ''}`}>
@@ -221,10 +438,17 @@ const SummaryRow = ({ label, value, isNegative, isTotal }) => (
 )
 
 const Timeline = ({ sale }) => {
+  const { mutate: MarkOrderAsPaid, isPending: markingAsPaid } = useUpdatePaymentStatus()
+
+    const HandleUpdatePayment = async (status, id) => {
+      if (markingAsPaid) return;
+      await MarkOrderAsPaid({ id, status })
+    }
   const events = [
-    { label: 'Created', date: sale.createdAt, user: sale.createdBy.name, icon: Clock },
-    sale.approvedAt && { label: 'Approved', date: sale.approvedAt, user: sale.approvedBy.name, icon: CheckCircle },
-    sale.completedAt && { label: 'Completed', date: sale.completedAt, user: sale.completedBy.name, icon: CheckCircle },
+    { label: 'Created', date: sale.createdAt, user: sale.createdBy.name, icon: Clock, color: 'text-default-600 bg-default-100' },
+    sale.approvedAt && { label: 'Approved', date: sale.approvedAt, user: sale.approvedBy.name, icon: CheckCircle, color: 'text-success bg-success-50' },
+    sale.rejectedAt && { label: 'Rejected', date: sale.rejectedAt, user: sale.rejectedBy.name, icon: AlertCircle, color: 'text-danger bg-danger-50' },
+    sale.completedAt && { label: 'Completed', date: sale.completedAt, user: sale.completedBy.name, icon: CheckCircle, color: 'text-success bg-success-50' },
   ].filter(Boolean)
 
   return (
@@ -235,6 +459,11 @@ const Timeline = ({ sale }) => {
           <TimelineEvent key={idx} event={event} isLast={idx === events.length - 1} />
         ))}
       </div>
+      <RadioGroup label='Payment Status' orientation="horizontal" defaultValue={sale?.paymentStatus || 'unpaid'} isDisabled={sale?.status == 'rejected' || sale?.status == 'draft'}>
+        {["unpaid", "partial", "paid"].map(status => (
+            <Radio key={status} value={status} onChange={() => HandleUpdatePayment(status, sale?._id)}>{status}</Radio>
+        ))}
+      </RadioGroup>
     </Card>
   )
 }
@@ -244,14 +473,14 @@ const TimelineEvent = ({ event, isLast }) => {
   return (
     <div className="flex gap-4">
       <div className="flex flex-col items-center">
-        <div className="bg-blue-100 text-blue-600 p-2 rounded-full">
+        <div className={`p-2 rounded-full ${event.color}`}>
           <Icon className="w-4 h-4" />
         </div>
         {!isLast && <div className="w-0.5 h-full bg-gray-200 mt-2" />}
       </div>
       <div className="flex-1 pb-4">
         <p className="text-sm font-medium ">{event.label}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">
           {new Date(event.date).toLocaleString()} by {event.user}
         </p>
       </div>
@@ -261,27 +490,30 @@ const TimelineEvent = ({ event, isLast }) => {
 
 const StatusBadge = ({ status }) => {
   const colors = {
-    completed: 'bg-green-100 text-green-800 border-green-200',
-    pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    cancelled: 'bg-red-100 text-red-800 border-red-200',
+    completed: 'success',
+    submitted: 'warning',
+    rejected: 'danger',
   }
   return (
-    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${colors[status] || colors.pending}`}>
-      {status.charAt(0).toUpperCase() + status.slice(1)}
-    </span>
+    <>
+      <Chip size="sm" variant="flat" color={colors[status] || colors.pending}>
+        {/* {colors[status]} */}
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Chip>
+    </>
   )
 }
 
 const PaymentBadge = ({ status }) => {
   const colors = {
-    paid: 'bg-green-100 text-green-800 border-green-200',
-    unpaid: 'bg-orange-100 text-orange-800 border-orange-200',
-    partial: 'bg-blue-100 text-blue-800 border-blue-200',
+    paid: 'success',
+    unpaid: 'danger',
+    partial: 'warning',
   }
   return (
-    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${colors[status] || colors.unpaid}`}>
+    <Chip size="sm" variant="flat" color={colors[status] || 'default'}>
       {status.charAt(0).toUpperCase() + status.slice(1)}
-    </span>
+    </Chip>
   )
 }
 
@@ -421,7 +653,7 @@ const ErrorState = ({ error }) => (
         <AlertCircle className="w-6 h-6 text-red-600" />
         <h2 className="text-xl font-semibold ">Error Loading Sale</h2>
       </div>
-      <p className="text-gray-600 dark:text-gray-400">{error?.message || 'An unexpected error occurred'}</p>
+      <p className="text-gray-600 dark:text-gray-300">{error?.message || 'An unexpected error occurred'}</p>
     </div>
   </Card>
 )

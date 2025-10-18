@@ -44,12 +44,14 @@ const saleOrderSchema = new mongoose.Schema({
   // approval / rejection / completion metadata
   approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   approvedAt: { type: Date },
+  submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  submittedAt: { type: Date },
   rejectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   rejectedAt: { type: Date },
   rejectedReason: { type: String },
   completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  markedAsPaidBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   completedAt: { type: Date },
+  markedAsPaidBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   invoiceNo: {
     type: String,
     required: true,
@@ -64,6 +66,19 @@ const saleOrderSchema = new mongoose.Schema({
     required: true,
   },
 }, { timestamps: true });
+
+
+// discreese stockCount in warehouse when sale is completed
+// saleOrderSchema.post('save', async function(doc, next) {
+//   if (doc.status === 'completed') {
+//     const Stock = mongoose.model('Stock');
+//     for (const item of doc.items) {
+//       await Stock.findByIdAndUpdate(item.stockId, { $inc: { quantity: -item.quantity } });
+//     }
+//   }
+//   next();
+// });
+
 
 // saleOrderSchema.index({ orgNo: 1, orderNo: 1 });
 const SaleOrder = mongoose.model('SaleOrder', saleOrderSchema);

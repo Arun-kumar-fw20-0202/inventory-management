@@ -67,6 +67,9 @@ const userSchema = new mongoose.Schema(
     referralCode: { type: String, unique: true, sparse: true }, // Unique referral code for each user
     whatsapp_cred: { type: Number } ,
     shop_name: { type: String },
+    // Forgot password token (store hashed token) and expiration
+    resetPasswordToken: { type: String, select: false },
+    resetPasswordExpires: { type: Date, select: false },
     last_login: {
       type: Date,
     }
@@ -97,8 +100,12 @@ const OrganizationSchema = new mongoose.Schema({
     amount: { type: String },
     paymentDate : { type: Date },
     willExpire: { type: Date },
-    details: {
-      type: String,
+    details: { 
+      limits: { type: Object },
+      amount: { type: Number },
+      name: { type: String },
+      durationInMonths: { type: Number },
+      isTrial: { type: Boolean, default: false },
     },
     lastPaymentId: { type: String }
   },

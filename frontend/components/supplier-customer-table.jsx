@@ -25,6 +25,8 @@ import {
    Calendar
 } from 'lucide-react'
 import { useSupplierCustomers, useDeleteSupplierCustomer } from '@/libs/mutation/suppliser-customer/suppliser-customer-mutation-query'
+import { formatDateRelative, formatNumberShort } from '@/libs/utils'
+import { useSelector } from 'react-redux'
 
 const SupplierCustomerCards = ({ 
    type = '', 
@@ -39,6 +41,9 @@ const SupplierCustomerCards = ({
    const [categoryFilter, setCategoryFilter] = useState('')
    const [sortBy, setSortBy] = useState('createdAt')
    const [sortOrder, setSortOrder] = useState('desc')
+   const [fields, setFields] = useState('metrics,name,email,phone,type,companyName,category,status,totalSales,totalPurchases,lastSaleAmount,lastPurchaseAmount,totalTransactions,displayName,lastTransactionDate,createdAt,rating') // 'basic' | 'detailed'
+
+   const user = useSelector((state) => state.auth.user);
 
    // Query filters
    const filters = useMemo(() => {
@@ -49,7 +54,8 @@ const SupplierCustomerCards = ({
          ...(statusFilter && { status: statusFilter }),
          ...(categoryFilter && { category: categoryFilter }),
          sortBy,
-         sortOrder
+         sortOrder,
+         fields,
       };
       
       if (type === 'supplier') {
@@ -119,7 +125,7 @@ const SupplierCustomerCards = ({
    }
 
    const ContactCard = ({ item }) => (
-      <Card className="w-full h-full  border dark:border-gray-600">
+      <Card className="w-full h-full  border shadow-sm border-default-100">
          <CardHeader className="pb-2">
             <div className="flex items-start justify-between w-full">
                <div className="flex items-center gap-3">
@@ -198,7 +204,7 @@ const SupplierCustomerCards = ({
          </CardHeader>
          <CardBody className="pt-0 space-y-4">
             {/* Contact Info */}
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 dark:text-gray-300">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                <Phone className="w-4 h-4" />
                <span className="line-clamp-1">{item?.phone}</span>
             </div>
@@ -217,28 +223,30 @@ const SupplierCustomerCards = ({
             )}
 
             {/* Financial Info */}
-            <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-3 space-y-2">
-               <div className="flex items-center gap-2 text-sm">
-                  <CreditCard className="w-4 h-4 text-gray-400" />
-                  <span className="font-medium">Financial Overview</span>
-               </div>
-               <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="text-center">
-                     <div className="text-gray-500 dark:text-gray-300">Credit Limit</div>
-                     <div className="font-semibold">{formatCurrency(item?.creditLimit)}</div>
+            {user?.data?.activerole != 'staff' && (
+               <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                     <CreditCard className="w-4 h-4 text-gray-400" />
+                     <span className="font-medium">Financial Overview</span>
                   </div>
-                  <div className="text-center">
-                     <div className="text-gray-500 dark:text-gray-300">Balance</div>
-                     <div className={`font-semibold ${item?.currentBalance < 0 ? 'text-red-500' : 'text-green-500'}`}>
-                        {formatCurrency(item?.currentBalance)}
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                     <div className="text-center">
+                        <div className="text-gray-500 dark:text-gray-300">Total Purchase</div>
+                        <div className="font-semibold">{formatNumberShort(item?.totalPurchases)}</div>
+                     </div>
+                     <div className="text-center">
+                        <div className="text-gray-500 dark:text-gray-300">Total Transaction</div>
+                        <div className={`font-semibold`}>
+                           {formatNumberShort(item?.totalTransactions)}
+                        </div>
+                     </div>
+                     <div className="text-center">
+                        <div className="text-gray-500 dark:text-gray-300">Total Sale.</div>
+                        <div className="font-semibold">₹ {formatNumberShort(item?.totalSales)}</div>
                      </div>
                   </div>
-                  <div className="text-center">
-                     <div className="text-gray-500 dark:text-gray-300">Total Trans.</div>
-                     <div className="font-semibold">{formatCurrency(item?.totalTransactions)}</div>
-                  </div>
                </div>
-            </div>
+            )}
 
             {/* Status and Category */}
             <div className="flex items-center justify-between">
@@ -271,9 +279,11 @@ const SupplierCustomerCards = ({
                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                      <span className="text-xs">{item?.rating || 0}/5</span>
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-300">
-                     {item?.metrics?.totalOrders || 0} orders
-                  </div>
+                  {user?.data?.activerole != 'staff' && (
+                     <div className="text-xs text-gray-500 dark:text-gray-300">
+                        {item?.metrics?.totalOrders || 0} orders
+                     </div>
+                  )}
                </div>
             </div>
 
@@ -285,11 +295,11 @@ const SupplierCustomerCards = ({
                </div>
                <div className="text-right">
                   <div className="font-medium text-xs">
-                     {formatDate(item?.lastTransactionDate)}
+                     {formatDateRelative(item?.lastTransactionDate)}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-300">
+                  {/* <div className="text-xs text-gray-500 dark:text-gray-300">
                      {formatDate(item?.updatedAt)}
-                  </div>
+                  </div> */}
                </div>
             </div>
          </CardBody>

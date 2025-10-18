@@ -38,7 +38,7 @@ const InventoryStats = ({ data }) => {
     {
       id: 3,
       label: 'Total Value',
-      value: `₹${data?.totalValue}`,
+      value: `₹${Number(data?.totalValue).toFixed(0)}`,
       icon: DollarSign,
       bgColor: 'bg-green-50',
       iconColor: 'text-green-600',
@@ -48,7 +48,7 @@ const InventoryStats = ({ data }) => {
     {
       id: 4,
       label: 'Total Cost',
-      value: `₹${data?.totalCost}`,
+      value: `₹${Number(data?.totalCost).toFixed(0)}`,
       icon: ShoppingCart,
       bgColor: 'bg-orange-50',
       iconColor: 'text-orange-600',
@@ -57,7 +57,7 @@ const InventoryStats = ({ data }) => {
     {
       id: 5,
       label: 'Average Price',
-      value: `₹${data?.averagePrice}`,
+      value: `₹${Number(data?.averagePrice).toFixed(0)}`,
       icon: Tag,
       bgColor: 'bg-cyan-50',
       iconColor: 'text-cyan-600',
@@ -66,7 +66,7 @@ const InventoryStats = ({ data }) => {
     {
       id: 6,
       label: 'Total Profit',
-      value: `₹${data?.totalProfit || 0}`,
+      value: `₹${Number(data?.totalProfit).toFixed(0) || 0}`,
       icon: TrendingUp,
       bgColor: 'bg-emerald-50',
       iconColor: 'text-emerald-600',

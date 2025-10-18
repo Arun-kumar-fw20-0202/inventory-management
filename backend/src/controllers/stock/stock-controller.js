@@ -48,7 +48,16 @@ const buildStockFilter = (query, orgNo) => {
      warehouse, location, supplier, minQuantity, maxQuantity, dateFrom, dateTo,
      profitMargin, outOfStock, expiryDate, barcode
    } = query;
+
+   console.log({status})
+   
    const filter = { orgNo };
+
+   console.log({category})
+
+   if(category && category !== 'all') {
+      filter.category = category;
+   }
 
    // Enhanced text search across multiple fields with relevance scoring
    if (search && search.trim()) {
@@ -56,7 +65,6 @@ const buildStockFilter = (query, orgNo) => {
       filter.$or = [
          { productName: searchRegex },
          { sku: searchRegex },
-         // { category: searchRegex },
          { description: searchRegex },
          // { warehouse: searchRegex },
          // { location: searchRegex },
@@ -66,23 +74,15 @@ const buildStockFilter = (query, orgNo) => {
       ];
    }
 
-   // Category filter - supports partial matching
-   if (category && category !== 'all') {
-      filter.category = { $regex: category, $options: "i" };
-   }
 
    // Status filter with multiple status support
    if (status && status !== 'all') {
-      if (Array.isArray(status)) {
-         filter.status = { $in: status };
-      } else {
-         filter.status = status;
-      }
+      filter.status = status;
    }
 
    // Warehouse filter
    if (warehouse && warehouse !== 'all') {
-      filter.warehouse = { $regex: warehouse, $options: "i" };
+      filter.warehouse = warehouse;
    }
 
    // Location filter
@@ -92,7 +92,7 @@ const buildStockFilter = (query, orgNo) => {
 
    // Supplier filter
    if (supplier && supplier !== 'all') {
-      filter.supplier = { $regex: supplier, $options: "i" };
+      filter.supplier = supplier;
    }
 
    // Unit filter
@@ -160,9 +160,9 @@ const buildStockFilter = (query, orgNo) => {
    }
 
    // Exclude archived items by default unless specifically requested
-   if (status !== 'archived' && !Array.isArray(status)) {
-      filter.status = { $ne: 'archived' };
-   }
+   // if (status !== 'archived' && !Array.isArray(status)) {
+   //    filter.status = { $ne: 'archived' };
+   // }
 
    return filter;
 };
@@ -845,6 +845,7 @@ const getAllStockController = async (req, res) => {
          page = 1, 
          limit = 20, 
          sortBy = 'updatedAt', 
+         category,
          sortOrder = 'desc',
          fields,
          includeAnalytics = false,
@@ -1405,7 +1406,6 @@ const getStockAnalyticsController = async (req, res) => {
    try {
       const orgNo = req.profile.orgNo;
 
-      console.log({profile: req.profile})
       
       // Use aggregation pipeline for efficient analytics calculation
       const analyticsResult = await StockModal.aggregate([

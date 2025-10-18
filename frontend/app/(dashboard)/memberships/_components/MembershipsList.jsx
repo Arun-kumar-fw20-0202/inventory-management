@@ -29,8 +29,8 @@ export default function MembershipsList() {
   }
 
   return (
-    <div className='p-4'>
-        <Card className='flex flex-row p-4 justify-between items-end mb-4'>
+    <div className=''>
+        <Card className='flex rounded-none flex-row p-4 shadow-sm justify-between items-end mb-4'>
             <div>
                 <h2 className='text-lg font-semibold'>Membership Plans</h2>
                 <div className='text-sm text-default-500'>Manage your membership and pricing plans</div>
@@ -42,13 +42,13 @@ export default function MembershipsList() {
             </div>
         </Card>
 
-        <Card className='p-4'>
+        <div className='p-4'>
             {viewMode === 'table' ? (
                 <MembershipsTableView plans={plans} isLoading={isLoading} pagination={pagination} onEdit={openEdit} onDelete={handleDelete} onPageChange={(p) => setFilters(f => ({ ...f, page: p }))} />
             ) : (
                 <MembershipsCardView plans={plans} isLoading={isLoading} onEdit={openEdit} onDelete={handleDelete} />
             )}
-        </Card>
+        </div>
         <MembershipModal isOpen={isModalOpen} onOpenChange={setModalOpen} mode={selected ? 'edit' : 'create'} initialData={selected} onSaved={() => { setModalOpen(false); refetch() }} />
     </div>
   )

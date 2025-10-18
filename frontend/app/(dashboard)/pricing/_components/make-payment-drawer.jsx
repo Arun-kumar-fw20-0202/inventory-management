@@ -9,37 +9,39 @@ import { PricingHeader } from './pricing-list'
 import api from '@/components/base-url'
 import { Spinner } from '@heroui/spinner'
 
-export const SelectedDrawer = ({ plan, isOpen, onOpenChange }) => {
+export const SelectedDrawer = ({ plan, isOpen, onOpenChange, billingCycle = 'monthly' }) => {
     
    const [paymentType, setPaymentType] = useState('one-time'); // 'one-time' or 'subscription'
-   const [paymentGateway, setPaymentGateway] = useState('razorpay'); // 'razorpay' or 'phonepe'
+   const [paymentGateway, setPaymentGateway] = useState('phonepe'); // 'razorpay' or 'phonepe'
     const { data: singleData, isLoading: fetchsingleplan } = usePlan(plan?._id, { enabled: Boolean(plan?._id) })
     const plandata = singleData?.data?.plan
+    const formatCurrency = (value) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value)
+
+    // compute final price depending on billingCycle
+    const finalPrice = plandata ? (billingCycle === 'yearly' ? (plandata.discountPrice || plandata.price) * 12 : (plandata.discountPrice || plandata.price)) : 0
 
 
     const handlePhonePePayment = async () => {
-      try {
-         console.log('🎯 Initiating PhonePe payment...');
-         
-         const { data } = await api.post("/payment/phone-pe/create-order", {
-            amount: plandata?.price,
-            dvc_id,
-            pricing_id: plandata?._id,
+        try {
             
-         });
+            const { data } = await api.post("/payment/phone-pe/create-order", {
+                amount: finalPrice,
+                pricing_id: plandata?._id,
+                billing_cycle: billingCycle
+            });
 
-         console.log('✅ PhonePe order created:', data);
+            console.log('✅ PhonePe order created:', data);
 
-         if (data.url) {
-            window.location.href = data.url;
-         } else {
-            alert("❌ Failed to create PhonePe payment");
-         }
-      } catch (err) {
-         console.error("PhonePe payment error:", err.response || err);
-         alert("Failed to initiate PhonePe payment. Please try again.");
-      }
-   };
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                alert("❌ Failed to create PhonePe payment");
+            }
+        } catch (err) {
+            console.error("PhonePe payment error:", err.response || err);
+            alert("Failed to initiate PhonePe payment. Please try again.");
+        }
+    };
 
     const loadRazorpayScript = () => {
         return new Promise((resolve) => {
@@ -132,8 +134,8 @@ export const SelectedDrawer = ({ plan, isOpen, onOpenChange }) => {
                                             <div className='flex flex-col gap-2'>
                                                 <Chip color='success' variant='flat' >{`SAVE ${PricingHeader({ plan })}%`}</Chip>
                                                 <div className="flex items-baseline gap-2 justify-center">
-                                                    <span className='text-3xl font-bold text-primary'>₹{plandata?.discountPrice}</span>
-                                                    <span className='text-lg text-gray-500 line-through'>₹{plandata?.price}</span>
+                                                    <span className='text-3xl font-bold text-primary'>₹{finalPrice}</span>
+                                                    <span className='text-lg text-gray-500 line-through'>₹{plandata?.price * 12}</span>
                                                 </div>
                                             </div>
                                         ) : (

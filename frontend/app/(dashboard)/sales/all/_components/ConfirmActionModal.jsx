@@ -2,6 +2,7 @@
 import React from 'react'
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@heroui/modal'
 import { Button } from '@heroui/button'
+import { Textarea } from '@heroui/input'
 
 const ConfirmActionModal = ({ open, title = 'Confirm', message, showReason = false, onCancel, onConfirm }) => {
   const [reason, setReason] = React.useState('')
@@ -19,13 +20,13 @@ const ConfirmActionModal = ({ open, title = 'Confirm', message, showReason = fal
         <ModalBody>
           <div className="mb-3">{message}</div>
           {showReason && (
-            <textarea value={reason} onChange={(e) => setReason(e.target.value)} className="w-full p-2 border rounded" placeholder="Optional reason" />
+            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Optional reason" />
           )}
         </ModalBody>
         <ModalFooter>
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => onCancel && onCancel()}>Cancel</Button>
-            <Button onClick={() => onConfirm && onConfirm(reason)}>Confirm</Button>
+            <Button variant="ghost" onPress={() => onCancel && onCancel()}>Cancel</Button>
+            <Button onPress={() => onConfirm && onConfirm(reason)}>Confirm</Button>
           </div>
         </ModalFooter>
       </ModalContent>

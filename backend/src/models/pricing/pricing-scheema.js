@@ -96,7 +96,11 @@ const PlanSchema = new mongoose.Schema(
     },
 
     // customizable removed - plans are managed by superadmin via API
-
+    billing_cycle: {
+      type: [String],
+      enum: ['monthly', 'yearly'],
+      default: ['monthly', 'yearly'],
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

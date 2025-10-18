@@ -13,6 +13,7 @@ import { Spinner } from "@heroui/spinner";
 import { User } from "@heroui/user";
 import { Tooltip } from "@heroui/tooltip";
 import dayjs from "dayjs";
+import { formatDateRelative } from "@/libs/utils";
 
 export const statusColorMap = {
   active: "success",
@@ -47,7 +48,7 @@ const DynamicDataTable = ({
   onRowClick,
   renderActions,
   loading,
-  isStriped,
+  isStriped= true,
   ...props
 }) => {
 
@@ -55,48 +56,58 @@ const DynamicDataTable = ({
     const cellValue = item[columnKey];
 
     switch (columnKey) {
+
+      case 'user' : return (
+        <User  description={item?.userId?.email} name={item?.userId?.name}>
+          {item?.userId?.email}
+        </User>
+      )
+      
       case "name":
         return (
-          <User avatarProps={{ radius: "lg", src: item.avatar }} description={item.email} name={cellValue}>
-            {item.email}
+          <User avatarProps={{ radius: "lg" }} description={item?.email || item?.description} name={cellValue}>
+            {item?.email}
           </User>
         );
         
 
-      case "role":
+      case "activerole":
         return (
           <div className="flex flex-col">
-            <p className="text-bold text-sm capitalize">{cellValue}</p>
-            <p className="text-bold text-sm text-default-400">{item.team}</p>
+            <p className="text-bold text-sm capitalize">{item?.userId?.activerole}</p>
+            <p className="text-bold text-sm text-default-400 dark:text-gray-300">{item?.team}</p>
           </div>
         );
 
       case "status":
         return (
-          <Chip className="capitalize" color={statusColorMap[item.status]} size="sm" variant="flat">
+          <Chip color={item?.revoked ? 'success' : 'danger'} size="sm" variant="flat">
             {cellValue}
           </Chip>
         );
       
-        case 'createdAt':
+      case 'createdBy' : return (
+        <User description={item?.createdBy?.email} name={item?.createdBy?.name}>
+          {item?.createdBy?.email}
+        </User>
+      )
+      
+        case 'lastUsedAt':
           return (
-            <Tooltip content={dayjs(item.createdAt).format("DD MMM YYYY")}>
+            <Tooltip content={formatDateRelative(cellValue)}>
               <p>{dayjs(cellValue).format("DD MMM YYYY")}</p>
             </Tooltip>
           );
 
       case "actions":
-        return renderActions ? (
+        // Hide action buttons when the item is revoked. Support both boolean and label styles.
+        const revokedFlag = item?.isRevoked ?? (item?.revoked === 'Revoked')
+        return renderActions && !revokedFlag ?  (
           <div className="flex justify-end">
             {renderActions(item)}
           </div>
         )
-        :
-        (
-          <div className="flex gap-2">
-            <p>No actions available.</p>
-          </div>
-        )
+        : null
 
       default:
         return cellValue;
@@ -104,10 +115,8 @@ const DynamicDataTable = ({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* {topContent && <div>{topContent}</div>} */}
 
-      <Table isStriped={true} aria-label="Dynamic table with custom cells" isLoading={loading} topContent={topContent} bottomContent={bottomContent}
+      <Table isStriped={isStriped} aria-label="Dynamic table with custom cells" isLoading={loading} topContent={topContent} bottomContent={bottomContent}
         classNames={{
           th: "bg-primary text-white",
         }}
@@ -134,15 +143,12 @@ const DynamicDataTable = ({
           </div>
         } >
           {(item) => (
-            <TableRow key={item._id} onClick={() => onRowClick?.(item)}>
+            <TableRow key={item?._id} onClick={() => onRowClick?.(item)}>
               {(columnKey) => <TableCell>{renderCell(item, columnKey)}</TableCell>}
             </TableRow>
           )}
         </TableBody>
       </Table>
-
-      {/* {bottomContent && <div>{bottomContent}</div>} */}
-    </div>
   );
 };
 

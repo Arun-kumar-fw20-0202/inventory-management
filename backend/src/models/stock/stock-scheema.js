@@ -158,6 +158,13 @@ StockSchema.statics.getCategoryAnalytics = function(orgNo) {
   ]);
 };
 
+// Increase the stockCount in warehouse when stock is added
+StockSchema.post('save', async function(doc, next) {
+  const Warehouse = mongoose.model('Warehouse');
+  await Warehouse.findByIdAndUpdate(doc.warehouse, { $inc: { stockCount: doc.quantity } });
+  next();
+});
+
 // Instance method to check if item needs restock
 StockSchema.methods.needsRestock = function() {
   return this.quantity <= this.lowStockThreshold;

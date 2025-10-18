@@ -12,9 +12,6 @@ const cookieParser = require("cookie-parser");
 const errorHandler = require("./src/middleware/errorHandler");
 
 // Import Routes
-const productRoutes = require("./src/routes/productRoutes");
-const tenantRoutes = require("./src/routes/tenantRoutes");
-const { authRouter } = require("./src/routes/authRoutes");
 const { AllRoutes } = require("./src/routes/all-routes");
 
 const app = express();

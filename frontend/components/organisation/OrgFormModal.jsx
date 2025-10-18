@@ -67,16 +67,7 @@ export default function OrgFormModal({ isOpen, onOpenChange, org = {} }) {
 
     try {
       if (org) {
-        updateOrg.mutate({ data: payload }, {
-          onSuccess: () => {
-            toast.success('Organisation updated')
-            onOpenChange(false)
-          },
-          onError: (err) => {
-            console.error(err)
-            toast.error(err?.response?.data?.message || 'Could not update organisation')
-          }
-        })
+        updateOrg.mutate({ data: payload })
       }
     } catch (err) {
       console.error('onSubmit error', err)

@@ -1,7 +1,9 @@
 // @ts-nocheck
-import { BarChart3, BookOpen, Building2, Calendar, CreditCard, Home, Inbox, Package, Settings, TrendingUp, User, Users } from "lucide-react";
+import { hasPermission } from "@/libs/utils/check-permission";
+import { BarChart3, BookOpen, Building2, Calendar, CreditCard, Home, Inbox, Package, ScanFace, Settings, TrendingUp, User, Users } from "lucide-react";
 
-export function getMenuList(role) {
+// getMenuList now accepts optional permissions object to avoid calling hooks at module scope
+export function getMenuList(role, permissions = null) {
   const ROLES = {
     SUPERADMIN: "superadmin",
     ADMIN: "admin",
@@ -10,6 +12,7 @@ export function getMenuList(role) {
   };
 
   const isVisibleForRole = (roles) => roles.includes(role);
+  const isSuper = role === ROLES.SUPERADMIN;
 
   const menuList = [
     {
@@ -17,7 +20,7 @@ export function getMenuList(role) {
       url: "/",
       icon: Home,
       menues: [],
-      visible: isVisibleForRole([ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+      visible: isSuper ,
       isBeta: false,
       isComingsoon: false,
     },
@@ -26,7 +29,7 @@ export function getMenuList(role) {
       url: "/organisation",
       icon: Building2,
       menues: [],
-      visible: isVisibleForRole([ROLES.ADMIN]),
+      visible: isSuper || hasPermission(permissions, 'organization', 'read'),
       isBeta: false,
       isComingsoon: false,
     },
@@ -34,13 +37,13 @@ export function getMenuList(role) {
       title: "Users",
       url: "/users",
       icon: Users,
-      visible: isVisibleForRole([ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.MANAGER]),
+      visible: isSuper || hasPermission(permissions, 'systemuser', 'read'),
       isBeta: false,
       isComingsoon: false,
       menues: [
-        { name: "Office Users", path: "/users", icon: Users },
-        { name: "Supplisers", path: "/suppliers", icon: User },
-        { name: "Customers", path: "/customers", icon: User },
+        { name: "System Users", path: "/users", icon: Users, visible: isSuper || hasPermission(permissions, 'systemuser', 'read') },
+        { name: "Supplisers", path: "/suppliers", icon: User, visible: isSuper || hasPermission(permissions, 'systemuser', 'read') },
+        { name: "Customers", path: "/customers", icon: User, visible: isSuper || hasPermission(permissions, 'systemuser', 'read') },
       ],
     },
     {
@@ -49,41 +52,23 @@ export function getMenuList(role) {
       icon: BookOpen,
       menues: [
         // wherehouse , category and stock menus will be there 
-        { name: "Warehouses", path: "/warehouse", icon: Home },
-        { name: "Categories", path: "/categories", icon: BookOpen },
-        { name: "All Stock", path: "/stock", icon: Inbox },
+        { name: "Warehouses", path: "/warehouse", icon: Home, visible: isSuper || hasPermission(permissions, 'stock', 'read') },
+        { name: "Categories", path: "/categories", icon: BookOpen, visible: isSuper || hasPermission(permissions, 'stock', 'read') },
+        { name: "All Stock", path: "/stock", icon: Inbox, visible: isSuper || hasPermission(permissions, 'stock', 'read') },
       ],
-      visible: isVisibleForRole([ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.MANAGER]),
+      visible: isSuper || hasPermission(permissions, 'stock', 'read'),
       isBeta: false,
       isComingsoon: false,
     },
-    // {
-    //   title: "Suppliers",
-    //   url: "/suppliers",
-    //   icon: User,
-    //   menues: [],
-    //   visible: isVisibleForRole([ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.MANAGER]),
-    //   isBeta: false,
-    //   isComingsoon: false,
-    // },
-    // {
-    //   title: "Customers",
-    //   url: "/customers",
-    //   icon: User,
-    //   menues: [],
-    //   visible: isVisibleForRole([ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
-    //   isBeta: false,
-    //   isComingsoon: false,
-    // },
     {
       title: "Sales",
       url: "#",
       icon: BarChart3,
       menues: [
-        { name: "New Sale", path: "/sales/new", icon: BarChart3 },
-        { name: "All Sales", path: "/sales/all", icon: Inbox },
+        { name: "New Sale", path: "/sales/new", icon: BarChart3, visible: isSuper || hasPermission(permissions, 'sales', 'read') },
+        { name: "All Sales", path: "/sales/all", icon: Inbox, visible: isSuper || hasPermission(permissions, 'sales', 'read') },
       ],
-      visible: isVisibleForRole([ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+      visible: isSuper || hasPermission(permissions, 'sales', 'read'),
       isBeta: false,
       isComingsoon: false,
     },
@@ -92,10 +77,10 @@ export function getMenuList(role) {
       url: "#",
       icon: Package,
       menues: [
-        { name: "View orders", path: "/purchase-orders", icon: CreditCard },
-        { name: "Create Order", path: "/create-order", icon: Inbox },
+        { name: "View orders", path: "/purchase-orders", icon: CreditCard, visible: isSuper || hasPermission(permissions, 'purchases', 'read') },
+        { name: "Create Order", path: "/create-order", icon: Inbox, visible: isSuper || hasPermission(permissions, 'purchases', 'read') },
       ],
-      visible: isVisibleForRole([ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+      visible: isSuper || hasPermission(permissions, 'purchases', 'read'),
       isBeta: false,
       isComingsoon: false,
     },
@@ -104,8 +89,8 @@ export function getMenuList(role) {
       url: "/reports",
       icon: Calendar,
       menues: [],
-      // visible: isVisibleForRole([ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.MANAGER]),
-      visible: false,
+      // visib,
+      visible: isSuper || hasPermission(permissions, 'reports', 'read'),
       isBeta: false,
       isComingsoon: false,
     },
@@ -114,7 +99,7 @@ export function getMenuList(role) {
       url: "/analytics",
       icon: TrendingUp,
       menues: [],
-      visible: isVisibleForRole([ROLES.SUPERADMIN, ROLES.ADMIN]),
+      visible: isSuper || hasPermission(permissions, 'reports', 'read'),
       isBeta: true,
       isComingsoon: false,
     },
@@ -122,11 +107,8 @@ export function getMenuList(role) {
       title: "Membserships",
       url: "/memberships",
       icon: CreditCard,
-      menues: [
-      //   { name: "Plans", path: "/memberships/pricing", icon: CreditCard },
-      //   { name: "My Plan", path: "/memberships/my-plan", icon: Inbox },
-      ],
-      visible: isVisibleForRole([ROLES.SUPERADMIN]),
+      menues: [],
+      visible: isSuper ,
       isComingsoon: false,
     },
     {
@@ -134,7 +116,16 @@ export function getMenuList(role) {
       url: "/pricing",
       icon: CreditCard,
       menues: [],
-      visible: isVisibleForRole([ROLES.ADMIN]),
+      visible: isSuper,
+      isBeta: false,
+      isComingsoon: false,
+    },
+    {
+      title: "Sessions",
+      url: "/sessions",
+      icon: ScanFace ,
+      menues: [],
+      visible: isSuper ||  hasPermission(permissions, 'sessions', 'read'),
       isBeta: false,
       isComingsoon: false,
     },
@@ -143,7 +134,7 @@ export function getMenuList(role) {
       url: "/settings",
       icon: Settings,
       menues: [],
-      visible: isVisibleForRole([ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.MANAGER]),
+      visible: isSuper || hasPermission(permissions, 'settings', 'read'),
       isBeta: false,
       isComingsoon: false,
     },

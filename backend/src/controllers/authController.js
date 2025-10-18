@@ -1,6 +1,9 @@
 const { UserModal, OrganizationModal } = require("../models/User");
 const { generateOrgNo } = require("../utils/generate-orgNo");
 const { generateToken } = require("../utils/jwt");
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const { SessionModel } = require('../models/session/SessionSchema');
 
 // 🔹 Signup Controller
 exports.signup = async (req, res, next) => {
@@ -84,15 +87,69 @@ exports.login = async (req, res, next) => {
     if (!isMatch) {
       return res.status(401).json({ success: false, message: "Invalid credentials" });
     }
-
     // Generate token
-    console.log('Generating token for user:', user._id);
     const token = generateToken(user);
-    console.log('Generated token:', token ? 'Token created successfully' : 'Token generation failed');
+
+    // compute token hash for storage
+    const hashToken = (t) => crypto.createHash('sha256').update(t).digest('hex');
+    const tokenHash = hashToken(token);
 
     // Update last login
     user.last_login = new Date();
     await user.save();
+
+    // Single-session enforcement for non-superadmin users
+    const isSuperadmin = (Array.isArray(user.role) && user.role.includes('superadmin')) || user.role === 'superadmin' || user.activerole === 'superadmin';
+
+    if (!isSuperadmin) {
+      // delete existing active sessions for this user
+      try {
+        await SessionModel.deleteMany({ userId: user._id });
+      } catch (e) {
+        console.error('Failed to remove old sessions for user:', e);
+      }
+    }
+
+    // decode token to get expiry
+    let expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    try {
+      const decoded = jwt.decode(token);
+      if (decoded && decoded.exp) {
+        expiresAt = new Date(decoded.exp * 1000);
+      }
+    } catch (e) {
+      // fallback to 7 days
+    }
+
+    // create new session
+    let newSession = null;
+    try {
+      newSession = await SessionModel.create({
+        userId: user._id,
+        tokenHash,
+        orgNo: user.orgNo,
+        userAgent: req.headers['user-agent'] || '',
+        ipAddress: req.headers['x-forwarded-for'] || req.ip || '',
+        createdAt: new Date(),
+        expiresAt,
+        revoked: false,
+        sessionType: 'session'
+      });
+    } catch (e) {
+      console.error('Failed to create session for user:', e);
+    }
+
+    // Revoke previous sessions (preserve history) for non-superadmin users
+    if (!isSuperadmin && newSession) {
+      try {
+        await SessionModel.updateMany(
+          { userId: user._id, _id: { $ne: newSession._id }, revoked: false },
+          { $set: { revoked: true, replacedBy: newSession._id } }
+        );
+      } catch (e) {
+        console.error('Failed to revoke previous sessions for user:', e);
+      }
+    }
 
     return res.status(200)
       .cookie("inventory_management_token", token, {
@@ -104,7 +161,7 @@ exports.login = async (req, res, next) => {
       .json({
         success: true,
         message: "Login successful",
-        token: token, // Include token in response for debugging
+        token: token,
         user: {
           id: user._id,
           name: user.name,
@@ -151,6 +208,18 @@ exports.getMe = async (req, res, next) => {
 
 exports.Logoutme = async (req, res, next) => {
   try {
+    // Attempt to revoke session by token (mark revoked instead of delete)
+    const token = req.cookies?.inventory_management_token || req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const hashToken = (t) => crypto.createHash('sha256').update(t).digest('hex');
+      const tokenHash = hashToken(token);
+      try {
+        await SessionModel.updateOne({ tokenHash }, { $set: { revoked: true } });
+      } catch (e) {
+        console.error('Failed to revoke session during logout:', e);
+      }
+    }
+
     return res.status(200).cookie("inventory_management_token", "", 
       { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: 'lax', expires: new Date(0) }
     ).json({ success: true, message: "Logout successful" });

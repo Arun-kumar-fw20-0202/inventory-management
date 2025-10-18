@@ -4,40 +4,40 @@ import { Card, CardBody, CardHeader } from '@heroui/card'
 import { useFetchCustomerInsights } from '@/libs/mutation/analytics/analytics-mutations'
 import { formatCurrency } from '@/libs/utils'
 
-const CustomerInsights = ({ params = {} }) => {
+const CustomerInsights = ({ params = {}, title="Top Customers" }) => {
     const { data, isLoading } = useFetchCustomerInsights(params)
     const items = data?.data?.items || []
 
     if (isLoading) {
-        return (
-            <Card>
-                <CardHeader>
-                    <h3 className="text-lg font-semibold">Top Customers</h3>
-                </CardHeader>
-                <CardBody>
-                    <div className="space-y-2">
-                        {Array.from({ length: 5 }).map((_, index) => (
-                            <div key={index} className="p-2 border border-default rounded flex justify-between items-center animate-pulse">
-                                <div>
-                                    <div className="h-4 bg-gray-300 rounded w-32 mb-1"></div>
-                                    <div className="h-3 bg-gray-200 rounded w-24"></div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="h-3 bg-gray-300 rounded w-16 mb-1"></div>
-                                    <div className="h-3 bg-gray-300 rounded w-20"></div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </CardBody>
-            </Card>
-        )
+      return (
+        <Card>
+          <CardHeader>
+              <h3 className="text-lg font-semibold">{title}</h3>
+          </CardHeader>
+          <CardBody>
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="p-2 border border-default rounded flex justify-between items-center animate-pulse">
+                  <div>
+                    <div className="h-4 bg-gray-300 rounded w-32 mb-1"></div>
+                    <div className="h-3 bg-gray-200 rounded w-24"></div>
+                  </div>
+                  <div className="text-right">
+                    <div className="h-3 bg-gray-300 rounded w-16 mb-1"></div>
+                    <div className="h-3 bg-gray-300 rounded w-20"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      )
     }
 
   return (
     <Card>
       <CardHeader>
-        <h3 className="text-lg font-semibold">Top Customers</h3>
+        <h3 className="text-lg font-semibold">{title}</h3>
       </CardHeader>
       <CardBody>
         <div className="space-y-2">

@@ -3,10 +3,11 @@ import React from 'react'
 import { Button } from '@heroui/button'
 import { Select, SelectItem } from '@heroui/select'
 import { Card } from '@heroui/card'
-import { ArrowLeftRight } from 'lucide-react'
+import { ArrowLeftRight, UserCircle2 } from 'lucide-react'
 import {Popover, PopoverTrigger, PopoverContent} from "@heroui/popover";
 import { Input } from '@heroui/input'
 import RowSteps from '@/components/stepper'
+import UsersAutocomplete from '@/components/dynamic/user-autocomplete'
 
 const todayISO = () => new Date().toISOString().split('T')[0]
 const startOfWeekISO = () => {
@@ -50,38 +51,42 @@ const FiltersBar = ({ filters, onChange }) => {
   return (
     <Card className="flex flex-col md:flex-row gap-3 items-center justify-between mb-4 p-4">
       <div className="flex items-center gap-3">
-        <div className="relative" ref={ref}>
+        <Popover color='foreground'>
+          <PopoverTrigger>
+              <Button variant="ghost">
+                  <span className="mr-2">Select Date Range</span>
+                  <ArrowLeftRight className="inline-block" />
+              </Button>
+          </PopoverTrigger>
+          <PopoverContent className='p-4'>
+              <div className="grid grid-cols-2 gap-2 mb-3 w-full">
+                  <Button variant='solid' size='sm' onPress={() => setPreset('today')}>Today</Button>
+                  <Button variant='solid' size='sm' onPress={() => setPreset('this_week')}>This Week</Button>
+                  <Button variant='solid' size='sm' onPress={() => setPreset('this_month')}>This Month</Button>
+                  <Button variant='solid' size='sm' onPress={() => setPreset('last_30')}>Last 30 Days</Button>
+              </div>
+              <div className="mb-3 space-y-1 w-full">
+                  <Input label='Start Date' type="date" value={local.startDate || ''} onChange={(e) => setLocal(prev => ({ ...prev, startDate: e.target.value }))} variant='flat' />
+                  <Input label='End Date' type="date" value={local.endDate || ''} onChange={(e) => setLocal(prev => ({ ...prev, endDate: e.target.value }))} variant='flat' />
+              </div>
 
-          <Popover color='foreground'>
-            <PopoverTrigger>
-                <Button variant="ghost">
-                    <span className="mr-2">Select Date Range</span>
-                    <ArrowLeftRight className="inline-block" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className='p-4'>
-                <div className="grid grid-cols-2 gap-2 mb-3 w-full">
-                    <Button variant='solid' size='sm' onPress={() => setPreset('today')}>Today</Button>
-                    <Button variant='solid' size='sm' onPress={() => setPreset('this_week')}>This Week</Button>
-                    <Button variant='solid' size='sm' onPress={() => setPreset('this_month')}>This Month</Button>
-                    <Button variant='solid' size='sm' onPress={() => setPreset('last_30')}>Last 30 Days</Button>
-                </div>
-                <div className="mb-3 space-y-1 w-full">
-                    <Input label='Start Date' type="date" value={local.startDate || ''} onChange={(e) => setLocal(prev => ({ ...prev, startDate: e.target.value }))} variant='flat' />
-                    <Input label='End Date' type="date" value={local.endDate || ''} onChange={(e) => setLocal(prev => ({ ...prev, endDate: e.target.value }))} variant='flat' />
-                </div>
-
-                <div className="flex gap-2 items-center w-full">
-                    {/* <Button className="text-sm text-gray-500" onPress={() => { setLocal({}); }}>Clear</Button> */}
-                    <Button size='sm' variant="bordered" color='danger' onPress={reset}>Clear</Button>
-                    <Button size='sm' onPress={apply}>Apply</Button>
-                </div>
-            </PopoverContent>
+              <div className="flex gap-2 items-center w-full">
+                  {/* <Button className="text-sm text-gray-500" onPress={() => { setLocal({}); }}>Clear</Button> */}
+                  <Button size='sm' variant="bordered" color='danger' onPress={reset}>Clear</Button>
+                  <Button size='sm' onPress={apply}>Apply</Button>
+              </div>
+          </PopoverContent>
         </Popover>
-        </div>
-
         <div className="hidden md:block text-sm text-gray-600 dark:text-gray-300">{local.startDate ? `${local.startDate} → ${local.endDate || '...'}` : 'No range selected'}</div>
       </div>
+      <UsersAutocomplete 
+        startContent={<UserCircle2 className="w-5 h-5 text-gray-400" />}
+        onSelectChange={(user) => onChange && onChange({ ...filters, userId: user }) }
+        placeholder="Filter by Staff or Manager"
+        clearable
+        className="max-w-xs"
+        label="Filter by Staff or Manager"
+      />
       {/* <RowSteps 
         currentStep={3}
         size="sm"

@@ -103,7 +103,7 @@ const validateGetPurchaseOrders = [
    
    query('status')
       .optional()
-      .isIn(['Draft', 'PendingApproval', 'Approved', 'PartiallyReceived', 'Completed', 'Cancelled'])
+      .isIn(['all','Draft', 'PendingApproval', 'Approved', 'PartiallyReceived', 'Completed', 'Cancelled'])
       .withMessage('Invalid status value'),
    
    query('supplierId')
@@ -116,15 +116,9 @@ const validateGetPurchaseOrders = [
       .isMongoId()
       .withMessage('Valid warehouse ID is required'),
    
-   query('startDate')
-      .optional()
-      .isISO8601()
-      .withMessage('Start date must be a valid date'),
+   query('startDate').optional().isISO8601().withMessage('Start date must be a valid date'),
    
-   query('endDate')
-      .optional()
-      .isISO8601()
-      .withMessage('End date must be a valid date'),
+   query('endDate').optional().isISO8601().withMessage('End date must be a valid date'),
    
    handleValidationErrors
 ];

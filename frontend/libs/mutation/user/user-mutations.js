@@ -98,6 +98,7 @@ export const useFetchUsers = (params = {}, options = {}) => {
 		queryKey: userKeys.list(params),
 		queryFn: () => fetchUsers(params),
 		keepPreviousData: true,
+		refetchOnWindowFocus: false,
 		staleTime: 2 * 60 * 1000, // 2 minutes
 		cacheTime: 10 * 60 * 1000, // 10 minutes
 		retry: 1,
@@ -112,6 +113,7 @@ export const useUser = (id, options = {}) => {
 		enabled: !!id,
 		staleTime: 3 * 60 * 1000,
 		cacheTime: 15 * 60 * 1000,
+		refetchOnWindowFocus: false,
 		...options,
 	});
 };

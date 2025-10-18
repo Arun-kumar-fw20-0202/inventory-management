@@ -7,13 +7,16 @@ const wherehouseSchema = new mongoose.Schema({
       type: String,
       required: true,
    },
-   branchId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Branch',
-   },
+   // branchId: {
+   //    type: mongoose.Schema.Types.ObjectId,
+   //    ref: 'Branch',
+   // },
    location: {
       type: String,
       required: true,
+   },
+   description: {
+      type: String,
    },
    active_status: {
       type: Boolean,
@@ -29,6 +32,9 @@ const wherehouseSchema = new mongoose.Schema({
    }
    
 }, {timestamps: true, versionKey: false  });
+
+// ensure unique warehouse per org by name
+wherehouseSchema.index({ name: 1, orgNo: 1 }, { unique: true, background: true });
 
 const WherehouseModel = mongoose.model('Warehouse', wherehouseSchema);
 

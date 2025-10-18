@@ -19,6 +19,12 @@ const PaymentHistoryScheema = mongoose.model("PaymentHistory", new mongoose.Sche
       enum: ['razorpay', 'phonepe', 'other'], 
       required: true 
    },
+
+   paymentType: { 
+      type: String, 
+      enum: ['monthly', 'yearly'], 
+      required: true 
+   },
    
    // Payment type
    payment_type: { 

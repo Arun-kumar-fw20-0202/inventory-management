@@ -23,30 +23,21 @@ const { RoleVerifyMiddleware } = require('../middleware/role-verify-middleware')
  * @desc    Get all supplier/customers with advanced filtering
  * @access  Private (All authenticated users)
  */
-SupplierCustomerRoutes.get('/',  
-   RoleVerifyMiddleware('all'),
-   getAllSupplierCustomers
-);
+SupplierCustomerRoutes.get('/', RoleVerifyMiddleware('all'), getAllSupplierCustomers);
 
 /**
  * @route   GET /api/supplier-customers/search
  * @desc    Search supplier/customers
  * @access  Private (All authenticated users)
  */
-SupplierCustomerRoutes.get('/search',  
-   RoleVerifyMiddleware('all'),
-   searchSupplierCustomers
-);
+SupplierCustomerRoutes.get('/search', RoleVerifyMiddleware('all'), searchSupplierCustomers);
 
 /**
  * @route   GET /api/supplier-customers/analytics
  * @desc    Get analytics for supplier/customers
  * @access  Private (Manager+ only)
  */
-SupplierCustomerRoutes.get('/analytics',  
-   RoleVerifyMiddleware('manager', 'admin', 'superadmin'),
-   getAnalytics
-);
+SupplierCustomerRoutes.get('/analytics', RoleVerifyMiddleware('manager', 'admin', 'superadmin'), getAnalytics);
 
 /**
  * @route   GET /api/supplier-customers/:id

@@ -220,6 +220,15 @@ const supplierCustomerSchema = new mongoose.Schema({
          type: Number,
          default: 0
       },
+      // Separate counters for purchase vs sale orders
+      totalSalesOrders: {
+         type: Number,
+         default: 0
+      },
+      totalPurchaseOrders: {
+         type: Number,
+         default: 0
+      },
       averageOrderValue: {
          type: Number,
          default: 0
@@ -334,6 +343,8 @@ supplierCustomerSchema.statics.searchContacts = async function(orgNo, searchTerm
  */
 supplierCustomerSchema.statics.getAnalytics = async function(orgNo, type = null) {
    const matchStage = { orgNo };
+
+   
    if (type) matchStage.type = type;
 
    const pipeline = [
@@ -366,16 +377,25 @@ supplierCustomerSchema.methods.updateTransactionMetrics = function(amount, type 
    if (type === 'purchase') {
       this.totalPurchases += amount;
       this.lastPurchaseAmount = amount;
+     this.metrics.totalPurchaseOrders = (this.metrics.totalPurchaseOrders || 0) + 1;
    } else {
       this.totalSales += amount;
       this.lastSaleAmount = amount;
+     this.metrics.totalSalesOrders = (this.metrics.totalSalesOrders || 0) + 1;
    }
    
    this.lastTransactionDate = new Date();
-   this.metrics.totalOrders += 1;
+   this.metrics.totalOrders = (this.metrics.totalOrders || 0) + 1;
    this.metrics.averageOrderValue = (this.totalPurchases + this.totalSales) / this.metrics.totalOrders;
    
    return this.save();
 };
 
-module.exports = mongoose.model('SupplierCustomer', supplierCustomerSchema);
+/**
+ * update transaction metrics with type sale that this much amount we have solde to this customer
+ * 
+ */
+
+
+const SuppliserCustomerModel = mongoose.model('SupplierCustomer', supplierCustomerSchema);
+module.exports = SuppliserCustomerModel;

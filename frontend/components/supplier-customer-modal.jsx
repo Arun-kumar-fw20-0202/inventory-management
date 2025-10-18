@@ -5,11 +5,9 @@ import { Button } from '@heroui/button'
 import { Input, Textarea } from '@heroui/input'
 import { Select, SelectItem } from '@heroui/select'
 import { Chip } from '@heroui/chip'
-import { Card, CardBody, CardHeader } from '@heroui/card'
-import { Switch } from '@heroui/switch'
-import { Divider } from '@heroui/divider'
 import { Plus, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { useCreateSupplierCustomer, useUpdateSupplierCustomer } from '@/libs/mutation/suppliser-customer/suppliser-customer-mutation-query'
+import { useSelector } from 'react-redux'
 
 const SupplierCustomerModal = ({ 
    isOpen, 
@@ -17,6 +15,7 @@ const SupplierCustomerModal = ({
    editData = null, 
    defaultType = 'supplier' 
 }) => {
+   const user = useSelector(state => state.auth.user)
    const [formData, setFormData] = useState({
       // Basic Information
       name: '',
@@ -32,7 +31,7 @@ const SupplierCustomerModal = ({
          city: '',
          state: '',
          zipCode: '',
-         country: 'USA'
+         country: 'INDIA'
       },
       
       // Contact Person
@@ -88,7 +87,7 @@ const SupplierCustomerModal = ({
                city: '',
                state: '',
                zipCode: '',
-               country: 'USA'
+               country: 'INDIA'
             },
             contactPerson: editData.contactPerson || {
                name: '',
@@ -118,7 +117,7 @@ const SupplierCustomerModal = ({
                city: '',
                state: '',
                zipCode: '',
-               country: 'USA'
+               country: 'INDIA'
             },
             contactPerson: {
                name: '',
@@ -205,9 +204,9 @@ const SupplierCustomerModal = ({
    }
 
    const typeOptions = [
-      { key: 'supplier', label: 'Supplier' },
-      { key: 'customer', label: 'Customer' },
-      { key: 'both', label: 'Both' }
+      { key: 'customer', label: 'Customer' , isVisible: ['all'] },
+      { key: 'supplier', label: 'Supplier' , isVisible: ['admin','manager', 'superadmin'].includes(user?.data?.activerole) ? ['all'] : [] },
+      { key: 'both', label: 'Both' , isVisible: ['admin','manager', 'superadmin'].includes(user?.data?.activerole) ? ['all'] : [] }
    ]
 
    const statusOptions = [
@@ -308,6 +307,7 @@ const SupplierCustomerModal = ({
                      isRequired
                   >
                      {typeOptions.map((option) => (
+                        (option.isVisible.includes(user.role) || option.isVisible.includes('all')) &&
                         <SelectItem key={option.key} value={option.key}>
                            {option.label}
                         </SelectItem>
@@ -391,14 +391,14 @@ const SupplierCustomerModal = ({
                         </SelectItem>
                      ))}
                   </Select>
-                  <Input
+                  {/* <Input
                      label="Credit Limit"
                      placeholder="Enter credit limit"
                      type="number"
                      value={formData.creditLimit.toString()}
                      onChange={(e) => handleInputChange('creditLimit', Number(e.target.value))}
                      variant="bordered"
-                  />
+                  /> */}
                   <Input
                      label="Rating (1-5)"
                      placeholder="Enter rating"
@@ -412,7 +412,7 @@ const SupplierCustomerModal = ({
                </div>
 
                {/* Payment Terms */}
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Select
                      label="Payment Terms"
                      placeholder="Select payment terms"
@@ -439,7 +439,7 @@ const SupplierCustomerModal = ({
                         </SelectItem>
                      ))}
                   </Select>
-               </div>
+               </div> */}
 
                {/* Tags */}
                <div className="space-y-2">

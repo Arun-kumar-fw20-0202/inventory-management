@@ -38,6 +38,7 @@ const SalesForm = () => {
   // Data Fetching
   const { data: stockData, isLoading: loadingStock } = useFetchStock({
     search,
+    status: 'active',
     limit: 10,
   })
 
@@ -251,6 +252,8 @@ const SalesForm = () => {
               placeholder={`Search ${cusSupplierMode}...`}
               variant="bordered"
               size="sm"
+              defaultSelectedKey={customerDetails?._id}
+              key={customerDetails?._id}
               userData={(userdata) => setCustomerDetails(userdata)}
               onSelectChange={(it) => setCustomer(it)} 
               startContent={<User className="w-4 h-4 text-gray-400" />}

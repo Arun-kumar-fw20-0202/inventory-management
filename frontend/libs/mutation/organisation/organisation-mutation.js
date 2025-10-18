@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/components/base-url'
 import { useDispatch } from 'react-redux'
 import { setOrganisation } from '@/redux/slices/organisation-slice'
+import toast from 'react-hot-toast'
 
 // Query keys
 export const organisationKeys = {
@@ -94,6 +95,12 @@ export function useUpdateOrganisation() {
             dispatch(setOrganisation({ organisation: data?.data?.organisation || null }));
 			queryClient.invalidateQueries({ queryKey: organisationKeys.detail(variables.id) })
 			queryClient.invalidateQueries({ queryKey: organisationKeys.all })
+			toast.success(data?.message || 'Organisation updated');
+
+		},
+		onError: (error) => {
+			console.error('Error updating organisation:', error);
+			toast.error(error?.response?.data?.error || 'Could not update organisation');
 		},
 	})
 }

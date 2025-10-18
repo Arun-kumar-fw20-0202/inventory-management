@@ -19,6 +19,10 @@ import dayjs from 'dayjs'
 import { Switch } from '@heroui/switch'
 import { DeleteIcon, EditIcon, EyeIcon, SearchIcon } from '@/components/icons'
 import { Select, SelectItem } from '@heroui/select'
+import { formatDateRelative } from '@/libs/utils'
+import ConfirmActionModal from '@/app/(dashboard)/sales/all/_components/ConfirmActionModal'
+import Link from 'next/link'
+import { UserRoundCog } from 'lucide-react'
 
 export const columns = [
   { name: 'NAME', uid: 'name' },
@@ -40,6 +44,11 @@ export default function UsersList({ activerole, topContent = null }) {
   const [query, setQuery] = useState('')
   const [editingUser, setEditingUser] = useState(null)
   const [isModalOpen, setModalOpen] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmTitle, setConfirmTitle] = useState('')
+  const [confirmMessage, setConfirmMessage] = useState('')
+  const [confirmShowReason, setConfirmShowReason] = useState(false)
+  const [confirmPayload, setConfirmPayload] = useState(null)
 
   const { data, isLoading, isFetching } = useFetchUsers({ ...params, q: query })
   const deleteUser = useDeleteUser()
@@ -56,42 +65,43 @@ export default function UsersList({ activerole, topContent = null }) {
   // Toggle block/unblock user
   const toggleBlock = useCallback((user) => {
     const action = user?.block_status ? 'Unblock' : 'Block'
-    if (!window.confirm(`${action} ${user?.name}?`)) return
-    updateUser?.mutate({ id: user?._id, data: { block_status: !user?.block_status } })
+    setConfirmTitle(`${action} user`)
+    setConfirmMessage(`Are you sure you want to ${action.toLowerCase()} ${user?.name}?`)
+    setConfirmShowReason(false)
+    setConfirmPayload({ type: 'toggleBlock', user })
+    setConfirmOpen(true)
   }, [updateUser])
 
   // Delete permanently if superadmin, else soft delete (block)
   const doDelete = useCallback((user) => {
-      if (!window.confirm(`Permanently delete ${user?.name}? This cannot be undone.`)) return
-      deleteUser?.mutate({ id: user?._id, hard: true })
-    // else {
-    //   // soft delete -> block
-    //   if (!window.confirm(`Block ${user?.name}?`)) return
-    //   updateUser?.mutate({ id: user?._id, data: { block_status: true } })
-    // }
+    setConfirmTitle('Delete user')
+    setConfirmMessage(`Permanently delete ${user?.name}? This cannot be undone.`)
+    // setConfirmShowReason(true)
+    setConfirmPayload({ type: 'deleteUser', user })
+    setConfirmOpen(true)
   }, [activerole, deleteUser, updateUser])
 
   // Render cell based on column key
   const renderCell = useCallback((user, columnKey) => {
     switch (columnKey) {
       case 'name':
-          return (
-          <User avatarProps={{ radius: 'lg', src: `https://i.pravatar.cc/150?u=${user?._id}` }} description={user?.email} name={user?.name}>
-              {user?.email}
-          </User>
-          )
+        return (
+        <User avatarProps={{ radius: 'lg', src: `https://i.pravatar.cc/150?u=${user?._id}` }} description={user?.email} name={user?.name}>
+            {user?.email}
+        </User>
+        )
       case 'role':
-          return (
-              <div className='flex flex-col'>
-                  <p className='text-sm font-semibold capitalize'>{user?.activerole}</p>
-              </div>
-          )
+        return (
+          <div className='flex flex-col'>
+              <p className='text-sm font-semibold capitalize'>{user?.activerole}</p>
+          </div>
+        )
       
       case 'createdBy' : {
         return (
           <div className='flex flex-col'>
             <p className='text-sm font-semibold capitalize'>{user?.createdBy?.name || 'N/A'}</p>
-            <p className='text-xs text-default-400'>{user?.createdBy?.email || ''}</p>
+            <p className='text-xs text-default-400 dark:text-gray-300'>{user?.createdBy?.email || ''}</p>
           </div>
         )
       }
@@ -99,7 +109,7 @@ export default function UsersList({ activerole, topContent = null }) {
       case 'last_login' : {
         return (
           <div className='flex flex-col text-nowrap'>
-            <p className='text-sm font-semibold capitalize'>{user?.last_login ? dayjs(user?.last_login).format("DD MMM YYYY h:m:s A") : 'Never'}</p>
+            <p className='text-sm font-semibold capitalize'>{user?.last_login ? `${formatDateRelative(user?.last_login) + " " + dayjs(user?.last_login).format("h:m A")}` : 'Never'}</p>
           </div>
         )
       }
@@ -107,14 +117,14 @@ export default function UsersList({ activerole, topContent = null }) {
       case 'status': {
         const status = user?.block_status ? 'blocked' : 'active'
         return (
-          <Chip className='capitalize' color={statusColorMap[status] || 'default'} size='sm' variant='flat'>
+          <Chip className='capitalize border-none' color={statusColorMap[status] || 'default'} size='sm' variant='dot'>
             {status}
           </Chip>
         )
       }
       case 'actions':
         return (
-          <div className='flex items-center gap-3'>
+          <div className='flex items-center justify-end gap-3'>
             <Tooltip content='View'>
               <span onClick={() => openEdit(user)} className='text-lg text-default-400 cursor-pointer active:opacity-60'><EyeIcon /></span>
             </Tooltip>
@@ -126,6 +136,10 @@ export default function UsersList({ activerole, topContent = null }) {
             </Tooltip>
             <Tooltip content={user?.block_status ? 'Unblock' : 'Block'}>
               <Switch isSelected={!user?.block_status} onValueChange={() => toggleBlock(user)} size='sm' />
+            </Tooltip>
+            {/* permisison */}
+            <Tooltip content='Manage Permissions'>
+              <Button isIconOnly size='sm' as={Link} startContent={<UserRoundCog size={18} />} href={`/permission/${user?._id}`} />
             </Tooltip>
           </div>
         )
@@ -178,7 +192,9 @@ export default function UsersList({ activerole, topContent = null }) {
   return (
     <div className=''>
       <div className=''>
-        <Table aria-label='Users table' isStriped className='' shadow='none' topContent={TableTopContent} isLoading={isLoading}>
+        <Table aria-label='Users table' shadow='none' topContent={TableTopContent} isLoading={isLoading}
+          isCompact
+        >
           <TableHeader columns={columns}>
             {(column) => (
               <TableColumn key={column.uid} align={column.uid === 'actions' ? 'center' : 'start'}>
@@ -214,9 +230,31 @@ export default function UsersList({ activerole, topContent = null }) {
           onOpenChange={(v) => { setModalOpen(!!v); if (!v) setEditingUser(null) }}
           mode='edit'
           initialData={editingUser}
-          onSuccess={() => { toast.success('Saved'); setEditingUser(null) }}
+          onSuccess={() => setEditingUser(null) }
         />
       )}
+      <ConfirmActionModal
+        open={confirmOpen}
+        title={confirmTitle}
+        message={confirmMessage}
+        showReason={confirmShowReason}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={(reason) => {
+          if (!confirmPayload) {
+            setConfirmOpen(false)
+            return
+          }
+          const { type, user } = confirmPayload
+          if (type === 'toggleBlock') {
+            updateUser?.mutate({ id: user?._id, data: { block_status: !user?.block_status } })
+          } else if (type === 'deleteUser') {
+            // pass reason if the mutation/back-end accepts it
+            deleteUser?.mutate({ id: user?._id, hard: true, reason })
+          }
+          setConfirmOpen(false)
+          setConfirmPayload(null)
+        }}
+      />
     </div>
   )
 }

@@ -1,207 +1,265 @@
 'use strict'
 const mongoose = require('mongoose')
 const { UserModal, OrganizationModal } = require('../../models/User')
+const { Permission } = require('../../models/permission/permission-scheema')
 const { success, error: sendError, forbidden } = require('../../utils/response')
 const { generateOrgNo } = require('../../utils/generate-orgNo')
+const { adminPermission, managerPermission, staffPermission } = require('../../utils/permissions')
 
 
 // validate how many users of each role can be created based on the organisation plan
 // returns an object { allowed: boolean, message?: string }
+// ──────────────────────────────────────────────────────────────
+//  Imports & Helpers (Assumed to be already defined elsewhere)
+// ──────────────────────────────────────────────────────────────
+// const { OrganizationModal, UserModal, Permission } = require('../models')
+// const { sendError, success, forbidden } = require('../utils/response')
+// const { generateOrgNo } = require('../utils/org')
+// const { adminPermission, managerPermission, staffPermission } = require('../permissions')
+
+// ──────────────────────────────────────────────────────────────
+//  Helper: Check if a user can be created based on plan limits
+// ──────────────────────────────────────────────────────────────
 const canCreateMore = async (orgNo, role) => {
   try {
-    const org = await OrganizationModal.findOne({ orgNo }).lean()
-    if (!org) return { allowed: false, message: 'Organisation not found' }
+    if (!orgNo) return { allowed: false, message: 'Organization number required' }
+
+    // Find or create org if missing
+    let org = await OrganizationModal.findOne({ orgNo }).lean()
+    if (!org) {
+      const newOrgNo = orgNo || await generateOrgNo()
+      org = await OrganizationModal.findOneAndUpdate(
+        { orgNo: newOrgNo },
+        {
+          $setOnInsert: {
+            name: `Org ${newOrgNo}`,
+            orgNo: newOrgNo,
+            counts: { users: 0, managers: 0, staff: 0 },
+          },
+        },
+        { new: true, upsert: true }
+      ).lean()
+    }
+
+    if (!org) return { allowed: false, message: 'Organization not found' }
 
     const counts = org.counts || { users: 0, managers: 0, staff: 0 }
-    const planDetails = org?.payment?.details || {}
+    const limits = org?.payment?.details?.limits || {}
 
-    // Treat undefined limits as unlimited (Infinity)
+    // Treat undefined limits as Infinity (unlimited)
     const planLimits = {
-      users: typeof planDetails.users === 'number' ? planDetails.users : Infinity,
-      managers: typeof planDetails.managers === 'number' ? planDetails.managers : Infinity,
-      staff: typeof planDetails.staff === 'number' ? planDetails.staff : Infinity,
+      users: Number.isFinite(limits.users) ? limits.users : Infinity,
+      managers: Number.isFinite(limits.managers) ? limits.managers : Infinity,
+      staff: Number.isFinite(limits.staff) ? limits.staff : Infinity,
     }
 
-    // For admin (counts.users covers admin + other users)
-    if (role === 'admin') {
-      if (counts.users >= planLimits.users) {
-        return { allowed: false, message: `User limit reached. Your current plan allows a maximum of ${planLimits.users} user(s). Please upgrade your plan to add more users.` }
-      }
+    // Validation logic per role
+    const roleChecks = {
+      admin: () =>
+        counts.users < planLimits.users || {
+          allowed: false,
+          message: `User limit reached. Upgrade your plan to add more users (max ${planLimits.users}).`,
+        },
+
+      manager: () =>
+        (counts.managers < planLimits.managers &&
+          counts.users < planLimits.users) || {
+          allowed: false,
+          message:
+            counts.managers >= planLimits.managers
+              ? `Manager limit reached. Max ${planLimits.managers} allowed.`
+              : `User limit reached. Max ${planLimits.users} allowed.`,
+        },
+
+      staff: () =>
+        (counts.staff < planLimits.staff &&
+          counts.users < planLimits.users) || {
+          allowed: false,
+          message:
+            counts.staff >= planLimits.staff
+              ? `Staff limit reached. Max ${planLimits.staff} allowed.`
+              : `User limit reached. Max ${planLimits.users} allowed.`,
+        },
     }
 
-    // For manager: check both manager slot and total users
-    if (role === 'manager') {
-      if (counts.managers >= planLimits.managers) {
-        return { allowed: false, message: `Manager limit reached. Your current plan allows a maximum of ${planLimits.managers} manager(s). Please upgrade your plan to add more managers.` }
-      }
-      if (counts.users >= planLimits.users) {
-        return { allowed: false, message: `User limit reached. Your current plan allows a maximum of ${planLimits.users} user(s). Please upgrade your plan to add more users.` }
-      }
-    }
-
-    // For staff: check staff slot and total users
-    if (role === 'staff') {
-      if (counts.staff >= planLimits.staff) {
-        return { allowed: false, message: `Staff limit reached. Your current plan allows a maximum of ${planLimits.staff} staff member(s). Please upgrade your plan to add more staff.` }
-      }
-      if (counts.users >= planLimits.users) {
-        return { allowed: false, message: `User limit reached. Your current plan allows a maximum of ${planLimits.users} user(s). Please upgrade your plan to add more users.` }
-      }
-    }
-
-    return { allowed: true }
+    const result = roleChecks[role]?.()
+    if (result === true || result?.allowed !== false) return { allowed: true }
+    return result
   } catch (err) {
     console.error('canCreateMore error:', err)
     return { allowed: false, message: 'Could not validate plan limits' }
   }
 }
 
-
-/**
- * ==========================
- * USER CONTROLLER (Production-Ready)
- * Multi-company | Role-aware | Fully Optimized
- * ==========================
- */
-
-// 🧩 CREATE USER
+// ──────────────────────────────────────────────────────────────
+//  Controller: Create User
+// ──────────────────────────────────────────────────────────────
 const createUser = async (req, res) => {
   let session = null
+
   try {
     const creator = req.profile
-    const { name, email, phone, password, role, owner, orgNo: bodyOrgNo } = req.body || {}
+    const { name, email, phone, password, role, owner } = req.body || {}
 
-    if (!name || !email || !phone || !password || !role) {
+    // ─── Validate input ─────────────────────────────
+    if (!name || !email || !phone || !password || !role)
       return sendError(res, 'Missing required fields: name, email, phone, password, role')
-    }
 
-    const normalizedRole = String(role).toLowerCase()
-    const allowedRoles = ['superadmin', 'admin', 'manager', 'staff']
-    if (!allowedRoles.includes(normalizedRole)) return sendError(res, 'Invalid role')
+    const normalizedRole = role.toLowerCase()
+    const validRoles = ['superadmin', 'admin', 'manager', 'staff']
+    if (!validRoles.includes(normalizedRole))
+      return sendError(res, 'Invalid role')
 
     const creatorRole = creator?.activerole || 'superadmin'
 
-    // ✅ Role creation logic
-    const canCreate = (() => {
-      if (creatorRole === 'superadmin') return true
-      if (creatorRole === 'admin') return ['manager', 'staff'].includes(normalizedRole)
-      if (creatorRole === 'manager') return normalizedRole === 'staff'
-      return false
-    })()
-
-    if (!canCreate) return forbidden(res, 'Not authorized to create this role')
-
-    // ✅ Determine orgNo
-    let orgNo = null
-    if (creatorRole === 'admin' || creatorRole === 'manager') {
-      orgNo = creator.orgNo
+    // ─── Role creation permissions ─────────────────
+    const canCreateRole = {
+      superadmin: ['admin', 'manager', 'staff'],
+      admin: ['manager', 'staff'],
+      manager: ['staff'],
     }
 
-    let createdOrganization = null
+    if (!canCreateRole[creatorRole]?.includes(normalizedRole) && creatorRole !== 'superadmin')
+      return forbidden(res, 'Not authorized to create this role')
+
+    // ─── Determine orgNo ───────────────────────────
+    let orgNo = creatorRole === 'superadmin' ? await generateOrgNo() : creator.orgNo
+    let user = null
+    let createdOrg = null
+
+    // ─── If creating admin ─────────────────────────
     if (normalizedRole === 'admin') {
-      if (creatorRole !== 'superadmin') return forbidden(res, 'Only superadmin can create admin users')
+      if (creatorRole !== 'superadmin')
+        return forbidden(res, 'Only superadmin can create admin users')
 
-      orgNo = bodyOrgNo || await generateOrgNo()
+      orgNo = await generateOrgNo()
 
-      // Prevent duplicate admins for same org
-      const existingAdmin = await UserModal.exists({ orgNo, activerole: 'admin' })
-      if (existingAdmin) return sendError(res, `An admin already exists for orgNo ${orgNo}`)
+      const adminExists = await UserModal.exists({ orgNo, activerole: 'admin' })
+      if (adminExists)
+        return sendError(res, `An admin already exists for orgNo ${orgNo}`)
 
-  // Start transaction
-      session = await mongoose.startSession()
-      session.startTransaction()
+      // Create org if missing
+      createdOrg = await OrganizationModal.findOneAndUpdate(
+        { orgNo },
+        {
+          $setOnInsert: {
+            name: `${name.trim()} Organization`,
+            orgNo,
+            counts: { users: 0, managers: 0, staff: 0 },
+          },
+        },
+        { new: true, upsert: true }
+      ).lean()
 
-      createdOrganization = new OrganizationModal({
-        name: `${name.trim()} Organization`,
+      // Create admin user
+      user = await UserModal.create({
+        name,
+        email: email.toLowerCase(),
+        phone,
+        password,
+        activerole: normalizedRole,
+        role: [normalizedRole],
         orgNo,
-        userId: null,
-        counts: { users: 0, managers: 0, staff: 0 }
+        owner: !!owner,
+        createdBy: creator?._id || null,
       })
-      // counts will be adjusted after creating the admin user (inside the transaction)
-      await createdOrganization.save({ session })
+
+      // Link org to user
+      await OrganizationModal.findOneAndUpdate(
+        { orgNo },
+        { $set: { userId: user._id }, $inc: { 'counts.users': 1 } }
+      );
+
+      // Seed default permissions asynchronously (upsert to ensure document exists)
+      ;(async () => {
+        try {
+          const template =
+            normalizedRole === 'admin'
+              ? adminPermission
+              : normalizedRole === 'manager'
+              ? managerPermission
+              : staffPermission
+
+          await Permission.findOneAndUpdate(
+            { userId: user._id },
+            {
+              $set: { permissions: template, orgNo },
+              $setOnInsert: { userId: user._id, createdBy: creator?._id || user._id },
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          )
+        } catch (err) {
+          console.error('Failed to seed default permissions (admin path):', err)
+        }
+      })()
     }
 
-    // BEFORE creating a non-superadmin user, validate plan limits for the org
-    // If creating an admin for a newly created org, the createdOrganization already holds counts (initially 0)
+    // ─── For manager/staff ─────────────────────────
     if (normalizedRole !== 'admin') {
       const targetOrgNo = orgNo || creator.orgNo
-      if (targetOrgNo) {
-        const limitCheck = await canCreateMore(targetOrgNo, normalizedRole)
-        if (!limitCheck.allowed) {
-          if (session) {
-            try { await session.abortTransaction() } catch (e) {}
-            try { session.endSession() } catch (e) {}
-          }
-          return sendError(res, limitCheck.message || 'Plan limits prevent creating this user')
+      const limitCheck = await canCreateMore(targetOrgNo, normalizedRole)
+      if (!limitCheck.allowed)
+        return sendError(res, limitCheck.message)
+    }
+
+    // ─── Unique email / phone check ────────────────
+    if (!user) {
+      const existingUser = await UserModal.findOne({
+        $or: [{ email: email.toLowerCase() }, { phone }],
+      }).lean()
+
+      if (existingUser)
+        return sendError(res, 'A user with that email or phone already exists')
+    }
+
+    // ─── Create non-admin users ────────────────────
+    if (!user) {
+      user = await UserModal.create({
+        name,
+        email: email.toLowerCase(),
+        phone,
+        password,
+        activerole: normalizedRole,
+        role: [normalizedRole],
+        orgNo: orgNo || null,
+        owner: !!owner,
+        createdBy: creator?._id || null,
+      })
+      // Seed default permissions asynchronously (upsert so updates on re-run are safe)
+      ;(async () => {
+        try {
+          const template =
+            user?.activerole === 'admin'
+              ? adminPermission
+              : user?.activerole === 'manager'
+              ? managerPermission
+              : staffPermission
+            
+            console.log(template)
+
+          await Permission.create({permissions: template, userId: user?._id, orgNo: user?.orgNo, createdBy: req?.profile?._id})
+        } catch (err) {
+          console.error('Failed to seed default permissions (non-admin path):', err)
         }
+      })()
+
+      // Increment org counts
+      const incMap = {
+        admin: { 'counts.users': 1 },
+        manager: { 'counts.managers': 1 },
+        staff: { 'counts.staff': 1 },
+      }
+
+      if (user.orgNo && incMap[normalizedRole]) {
+        await OrganizationModal.findOneAndUpdate(
+          { orgNo: user.orgNo },
+          { $inc: incMap[normalizedRole] }
+        )
       }
     }
 
-    // ✅ Global unique email/phone
-    const existing = await UserModal.findOne({ $or: [{ email: email.toLowerCase() }, { phone }] }).lean()
-    if (existing) {
-      if (session) await session.abortTransaction()
-      if (session) session.endSession()
-      return sendError(res, 'A user with that email or phone already exists')
-    }
-
-    const userObj = {
-      name,
-      email: String(email).toLowerCase(),
-      phone,
-      password,
-      activerole: normalizedRole,
-      role: [normalizedRole],
-      orgNo: orgNo || null,
-      owner: !!owner,
-      createdBy: creator?._id || null,
-    }
-
-  let user
-    if (createdOrganization) {
-      // create user inside transaction
-      // For admin creation within a transaction, also verify limits on the new org (defensive)
-      const limitCheckForAdmin = await canCreateMore(createdOrganization.orgNo, 'admin')
-      if (!limitCheckForAdmin.allowed) {
-        try { await session.abortTransaction() } catch (e) {}
-        try { session.endSession() } catch (e) {}
-        return sendError(res, limitCheckForAdmin.message || 'Plan limits prevent creating admin for this organisation')
-      }
-
-      user = await UserModal.create([userObj], { session })
-      user = user[0]
-
-      // link and update counts in the same transaction
-      createdOrganization.userId = user._id
-      // admin counts as a user for the organisation
-      createdOrganization.counts = createdOrganization.counts || { users: 0, managers: 0, staff: 0 }
-      createdOrganization.counts.users = (createdOrganization.counts.users || 0) + 1
-
-  await createdOrganization.save({ session })
-
-      await session.commitTransaction()
-      session.endSession()
-    } else {
-      user = await UserModal.create(userObj)
-
-      // Update organisation counts atomically for existing orgs
-      try {
-        if (user.orgNo) {
-          const inc = {}
-          if (normalizedRole === 'admin') inc['counts.users'] = 1
-          else if (normalizedRole === 'manager') inc['counts.managers'] = 1
-          else if (normalizedRole === 'staff') inc['counts.staff'] = 1
-
-          if (Object.keys(inc).length > 0) {
-            await OrganizationModal.findOneAndUpdate({ orgNo: user.orgNo }, { $inc: inc })
-          }
-        }
-      } catch (e) {
-        console.error('Failed updating organisation counts:', e)
-      }
-    }
-
-    const userSafe = user.toObject()
+    // ─── Prepare and return response ───────────────
+    const userSafe = user.toObject ? user.toObject() : user
     delete userSafe.password
 
     return success(res, 'User created successfully', { user: userSafe })
@@ -211,10 +269,12 @@ const createUser = async (req, res) => {
       try { await session.abortTransaction() } catch {}
       try { session.endSession() } catch {}
     }
-    if (err && err.code === 11000) {
+
+    if (err?.code === 11000) {
       const fields = Object.keys(err.keyValue || {}).join(', ')
       return sendError(res, `Duplicate value for fields: ${fields}`)
     }
+
     return sendError(res, 'Could not create user', err)
   }
 }
@@ -232,7 +292,8 @@ const fetchUsers = async (req, res) => {
       startDate, 
       endDate, 
       sortBy = 'createdAt', 
-      sortOrder = 'desc' 
+      sortOrder = 'desc',
+      fields // new field parameter
     } = req.query || {}
 
     const filters = {
@@ -276,12 +337,20 @@ const fetchUsers = async (req, res) => {
     const skip = (Number(page) - 1) * Number(limit)
     const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 }
 
+    // Build select string based on fields parameter
+    let selectFields = '-password -updatedAt -__v'
+    if (fields) {
+      // Convert comma-separated fields to space-separated for MongoDB select
+      const requestedFields = fields.split(',').map(field => field.trim()).join(' ')
+      selectFields = requestedFields
+    }
+
     // Parallel query execution for performance
     const [users, total] = await Promise.all([
       UserModal.find(filters)
         .populate('createdBy', 'name email')
         .lean()
-        .select('-password -updatedAt -__v')
+        .select(selectFields)
         .sort(sort)
         .skip(skip)
         .limit(Number(limit)),
@@ -350,9 +419,12 @@ const updateUser = async (req, res) => {
     const { id } = req.params
     const update = { ...req.body }
 
+    // Load existing user to reason about changes (role/org/block transitions)
+    const existingUser = await UserModal.findById(id).lean()
+    if (!existingUser) return sendError(res, 'User not found')
+
     // non-superadmin cannot change protected fields
     if (requester?.activerole !== 'superadmin') {
-      delete update.activerole
       delete update.orgNo
     }
 
@@ -366,6 +438,115 @@ const updateUser = async (req, res) => {
       return forbidden(res, 'Only superadmin can promote to admin')
     }
 
+    // Validation: If role is changing, moving org, or user is being unblocked -> ensure target org has capacity
+    // 1) Role change
+    const validationNewRole = update.activerole || existingUser.activerole
+    const orgAfter = req.profile.orgNo
+    if (validationNewRole && validationNewRole !== existingUser.activerole) {
+      if (orgAfter) {
+        const limitCheck = await canCreateMore(orgAfter, validationNewRole)
+        if (!limitCheck.allowed) return sendError(res, limitCheck.message || 'Plan limits prevent changing role')
+      }
+    }
+
+    // 2) Moving user to another org (role remains same)
+    if (update.orgNo && update.orgNo !== existingUser.orgNo) {
+      if (existingUser.activerole) {
+        const limitCheck = await canCreateMore(update.orgNo, existingUser.activerole)
+        if (!limitCheck.allowed) return sendError(res, limitCheck.message || 'Plan limits prevent moving user to the target organisation')
+      }
+    }
+
+    // 3) Unblocking user (reactivating) - ensure org has capacity
+    if (update.block_status === false && existingUser.block_status === true) {
+      const targetOrg = update.orgNo || existingUser.orgNo
+      if (targetOrg && existingUser.activerole) {
+        const limitCheck = await canCreateMore(targetOrg, existingUser.activerole)
+        if (!limitCheck.allowed) return sendError(res, limitCheck.message || 'Plan limits prevent reactivating this user')
+      }
+    }
+
+    // Determine whether we need to update organisation counts
+    const roleFieldMap = { admin: 'counts.users', manager: 'counts.managers', staff: 'counts.staff' }
+
+    const oldRole = existingUser.activerole
+    const newRole = update.activerole || oldRole
+    const oldOrg = existingUser.orgNo
+    const newOrg = update.orgNo !== undefined ? update.orgNo : oldOrg
+
+    const wasBlocked = !!existingUser.block_status
+    const willBeBlocked = update.block_status !== undefined ? !!update.block_status : wasBlocked
+
+    const orgUpdates = {}
+
+    // Helper to add incs: orgUpdates[orgNo] = { 'counts.users': x, ... }
+    const addInc = (orgNo, field, delta) => {
+      if (!orgNo) return
+      orgUpdates[orgNo] = orgUpdates[orgNo] || {}
+      orgUpdates[orgNo][field] = (orgUpdates[orgNo][field] || 0) + delta
+    }
+
+    // If user is being blocked now -> decrement their existing role from their org
+    if (!wasBlocked && willBeBlocked) {
+      if (oldRole && oldOrg) addInc(oldOrg, roleFieldMap[oldRole], -1)
+    }
+
+    // If user is being unblocked now -> increment their role in target org
+    if (wasBlocked && !willBeBlocked) {
+      if (newRole && newOrg) addInc(newOrg, roleFieldMap[newRole], 1)
+    }
+
+    // Role changed while active -> move counts within same org or across orgs
+    if (newRole !== oldRole && !wasBlocked && !willBeBlocked) {
+      if (oldOrg === newOrg) {
+        if (oldRole) addInc(oldOrg, roleFieldMap[oldRole], -1)
+        if (newRole) addInc(newOrg, roleFieldMap[newRole], 1)
+      } else {
+        if (oldRole && oldOrg) addInc(oldOrg, roleFieldMap[oldRole], -1)
+        if (newRole && newOrg) addInc(newOrg, roleFieldMap[newRole], 1)
+      }
+    }
+
+    // Org moved without role change while active
+    if (oldOrg !== newOrg && newRole === oldRole && !wasBlocked && !willBeBlocked) {
+      if (oldRole && oldOrg) addInc(oldOrg, roleFieldMap[oldRole], -1)
+      if (oldRole && newOrg) addInc(newOrg, roleFieldMap[oldRole], 1)
+    }
+
+    // If there are orgUpdates, perform them in a transaction along with the user update
+    const hasOrgUpdates = Object.keys(orgUpdates).length > 0
+
+    if (hasOrgUpdates) {
+      const session = await mongoose.startSession()
+      session.startTransaction()
+      try {
+        const user = await UserModal.findByIdAndUpdate(id, update, { new: true, session }).lean()
+        if (!user) {
+          await session.abortTransaction()
+          session.endSession()
+          return sendError(res, 'User not found')
+        }
+
+        // apply all org updates
+        const orgUpdatePromises = Object.entries(orgUpdates).map(([orgNo, incObj]) => {
+          return OrganizationModal.findOneAndUpdate({ orgNo }, { $inc: incObj }, { session })
+        })
+        await Promise.all(orgUpdatePromises)
+
+        await session.commitTransaction()
+        session.endSession()
+
+        delete user.password
+        return success(res, 'User updated successfully', { user })
+      } catch (e) {
+        console.error('Failed updating user and org counts transactionally:', e)
+        try { await session.abortTransaction() } catch (ee) {}
+        try { session.endSession() } catch (ee) {}
+        return sendError(res, 'Failed to update user')
+      }
+    }
+
+    // No org count changes needed, just update the user
     const user = await UserModal.findByIdAndUpdate(id, update, { new: true }).lean()
     if (!user) return sendError(res, 'User not found')
 
@@ -384,7 +565,7 @@ const deleteUser = async (req, res) => {
     const { id } = req.params
     const hard = req.query.hard === 'true'
 
-    if (hard && requester?.activerole !== 'superadmin') return forbidden(res, 'Not authorized')
+    // if (hard && requester?.activerole !== 'superadmin') return forbidden(res, 'Not authorized')
 
     if (hard) {
         // find user to adjust counts

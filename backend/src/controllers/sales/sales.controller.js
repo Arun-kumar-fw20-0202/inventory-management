@@ -5,6 +5,9 @@ const { success, error: sendError, notFound, forbidden, error } = require('../..
 const { StockModal } = require('../../models/stock/stock-scheema');
 const SupplierCustomer = require('../../models/supplier/supplier-customer-scheema');
 const { SaleOrder } = require('../../models/sales/sales-scheema');
+const Notification = require('../../models/notification/notification-scheema');
+const { sendNotification } = require('../../utils/notification-service');
+const { UserModal } = require('../../models/User');
 
 // In-memory cache placeholder
 const analyticsCache = new Map();
@@ -53,6 +56,8 @@ const createSaleSale = async (req, res) => {
     });
 
     await sale.save();
+    // Note: customer metrics (totalSales, metrics.averageOrderValue, lastSaleAmount)
+    // are intentionally NOT updated here. Metrics should reflect completed sales only.
 
     return success(res, 'Sale created', sale);
   } catch (err) {
@@ -71,7 +76,36 @@ const SubmitSale = async (req, res) => {
     if (!sale) return notFound(res, 'Sale not found');
     if (sale.status !== 'draft') return sendError(res, 'Only draft sales can be submitted', 400);
 
-    const updated = await SaleOrder.findOneAndUpdate({ _id: id, orgNo }, { $set: { status: 'submitted' } }, { new: true }).lean();
+    const updated = await SaleOrder.findOneAndUpdate({ _id: id, orgNo }, { $set: { 
+      status: 'submitted',
+      submittedBy: req.profile._id,
+      submittedAt: new Date()
+    } }, { new: true }).lean();
+
+    // Send notification to approvers (admins/managers) depending on submitter role
+    (async () => {
+      try {
+        const submitterRole = req.profile?.activerole || 'staff';
+        const recipientRoles = [];
+        if (submitterRole === 'manager') {
+          recipientRoles.push('admin');
+        } else {
+          // staff submits -> notify both managers and admins
+          recipientRoles.push('manager', 'admin');
+        }
+
+        const recipients = await UserModal.find({ orgNo, activerole: { $in: recipientRoles }, block_status: false }).select('_id').lean();
+        const recipientIds = recipients.map(r => r._id).filter(Boolean);
+        if (recipientIds.length > 0) {
+          const title = `Sale submitted: ${updated.orderNo || updated._id}`;
+          const message = `${req.profile.name || 'A user'} has submitted a sale (${updated.orderNo || ''}). Please review and approve.`;
+          // Ensure admins always get notified; exclude the submitter
+          await sendNotification({ orgNo, userIds: recipientIds, excludeIds: [req.profile._id], payload: { orgNo, title, message, type: 'sale:submitted', action: { url: `/sales/${updated._id}` } }, includeAdmins: true });
+        }
+      } catch (notifyErr) {
+        logger.error('Notify on submit sale failed', notifyErr);
+      }
+    })();
     return success(res, 'Sale submitted for approval', updated);
   } catch (err) {
     logger.error('Submit sale error', err);
@@ -135,6 +169,62 @@ const ApproveSale = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
+    // Notify creator that sale was approved
+    (async () => {
+      try {
+        const creatorId = updated.createdBy;
+        if (creatorId) {
+          // fetch creator user to include name in admin message
+          let creator = null;
+          try {
+            creator = await UserModal.findById(creatorId).select('name activerole').lean();
+          } catch (e) {
+            logger.warn('Failed to load creator user for notification', e);
+          }
+
+          const approverName = req.profile?.name || 'A user';
+          const creatorName = creator?.name || 'a user';
+          const orderNo = updated.orderNo || String(updated._id);
+
+          // 1) Notify the creator (personalized)
+          const titleCreator = `Sale approved: ${orderNo}`;
+          const messageCreator = `${approverName} approved your sale (${orderNo}).`;
+          const payloadCreator = {
+            orgNo,
+            title: titleCreator,
+            message: messageCreator,
+            type: 'sale:approved',
+            action: { url: `/sales/${updated._id}` },
+            relatedEntity: { entityType: 'ORDER', entityId: updated._id },
+            metadata: {
+              actor: { id: req.profile._id, name: approverName, role: req.profile?.activerole },
+              target: { id: creatorId, name: creatorName }
+            }
+          };
+          await sendNotification({ orgNo, userIds: [creatorId], includeAdmins: false, payload: payloadCreator });
+
+          // 2) Notify admins with staff name included
+          const titleAdmin = `Sale approved: ${orderNo}`;
+          const messageAdmin = `${approverName} approved ${creatorName}'s sale (${orderNo}).`;
+          const payloadAdmin = {
+            orgNo,
+            title: titleAdmin,
+            message: messageAdmin,
+            type: 'sale:approved:admin',
+            action: { url: `/sales/${updated._id}` },
+            relatedEntity: { entityType: 'ORDER', entityId: updated._id },
+            metadata: {
+              actor: { id: req.profile._id, name: approverName, role: req.profile?.activerole },
+              target: { id: creatorId, name: creatorName }
+            }
+          };
+          await sendNotification({ orgNo, roles: ['admin'], includeAdmins: false, payload: payloadAdmin });
+        }
+      } catch (notifyErr) {
+        logger.error('Notify on approve sale failed', notifyErr);
+      }
+    })();
+
     return success(res, 'Sale approved and stock updated', updated);
   } catch (err) {
     await session.abortTransaction();
@@ -156,6 +246,56 @@ const RejectSale = async (req, res) => {
     if (['approved', 'completed'].includes(sale.status)) return sendError(res, 'Cannot reject an approved or completed sale', 400);
 
     const updated = await SaleOrder.findOneAndUpdate({ _id: id, orgNo }, { $set: { status: 'rejected', rejectedBy: req.profile._id, rejectedAt: new Date(), rejectedReason: reason || '' } }, { new: true }).lean();
+
+    // Notify creator about rejection and admins with staff name
+    (async () => {
+      try {
+        const creatorId = updated.createdBy;
+        if (creatorId) {
+          // load creator to get name
+          let creator = null;
+          try {
+            creator = await UserModal.findById(creatorId).select('name activerole').lean();
+          } catch (e) {
+            logger.warn('Failed to load creator user for rejection notification', e);
+          }
+
+          const actorName = req.profile?.name || 'A user';
+          const creatorName = creator?.name || 'a user';
+          const orderNo = updated.orderNo || String(updated._id);
+
+          // personalized to creator
+          const titleCreator = `Sale rejected: ${orderNo}`;
+          const messageCreator = `${actorName} rejected your sale (${orderNo})${reason ? ` Reason: ${reason}` : ''}`;
+          const payloadCreator = {
+            orgNo,
+            title: titleCreator,
+            message: messageCreator,
+            type: 'sale:rejected',
+            action: { url: `/sales/${updated._id}` },
+            relatedEntity: { entityType: 'ORDER', entityId: updated._id },
+            metadata: { actor: { id: req.profile._id, name: actorName, role: req.profile?.activerole }, target: { id: creatorId, name: creatorName }, reason }
+          };
+          await sendNotification({ orgNo, userIds: [creatorId], includeAdmins: false, payload: payloadCreator });
+
+          // notify admins with staff name included
+          const titleAdmin = `Sale rejected: ${orderNo}`;
+          const messageAdmin = `${actorName} rejected ${creatorName}'s sale (${orderNo})${reason ? ` Reason: ${reason}` : ''}`;
+          const payloadAdmin = {
+            orgNo,
+            title: titleAdmin,
+            message: messageAdmin,
+            type: 'sale:rejected:admin',
+            action: { url: `/sales/${updated._id}` },
+            relatedEntity: { entityType: 'ORDER', entityId: updated._id },
+            metadata: { actor: { id: req.profile._id, name: actorName, role: req.profile?.activerole }, target: { id: creatorId, name: creatorName }, reason }
+          };
+          await sendNotification({ orgNo, roles: ['admin'], includeAdmins: false, payload: payloadAdmin });
+        }
+      } catch (notifyErr) {
+        logger.error('Notify on reject sale failed', notifyErr);
+      }
+    })();
     return success(res, 'Sale rejected', updated);
   } catch (err) {
     logger.error('Reject sale error', err);
@@ -168,12 +308,106 @@ const CompleteSale = async (req, res) => {
   try {
     const id = req.params.id;
     const orgNo = req.profile.orgNo;
-
     const sale = await SaleOrder.findOne({ _id: id, orgNo }).lean();
     if (!sale) return notFound(res, 'Sale not found');
     if (sale.status !== 'approved') return sendError(res, 'Only approved sales can be completed', 400);
 
-    const updated = await SaleOrder.findOneAndUpdate({ _id: id, orgNo }, { $set: { status: 'completed', completedBy: req.profile._id, completedAt: new Date() } }, { new: true }).lean();
+    // Mark sale as completed first
+    const updated = await SaleOrder.findOneAndUpdate(
+      { _id: id, orgNo },
+      { $set: { status: 'completed', completedBy: req.profile._id, completedAt: new Date() } },
+      { new: true }
+    ).lean();
+
+      // Notify creator about completion and admins with staff name
+      (async () => {
+        try {
+          const creatorId = updated.createdBy;
+          if (creatorId) {
+            let creator = null;
+            try {
+              creator = await UserModal.findById(creatorId).select('name activerole').lean();
+            } catch (e) {
+              logger.warn('Failed to load creator user for completion notification', e);
+            }
+
+            const actorName = req.profile?.name || 'A user';
+            const creatorName = creator?.name || 'a user';
+            const orderNo = updated.orderNo || String(updated._id);
+
+            const titleCreator = `Sale completed: ${orderNo}`;
+            const messageCreator = `${actorName} completed your sale (${orderNo}).`;
+            const payloadCreator = {
+              orgNo,
+              title: titleCreator,
+              message: messageCreator,
+              type: 'sale:completed',
+              action: { url: `/sales/${updated._id}` },
+              relatedEntity: { entityType: 'ORDER', entityId: updated._id },
+              metadata: { actor: { id: req.profile._id, name: actorName, role: req.profile?.activerole }, target: { id: creatorId, name: creatorName } }
+            };
+            await sendNotification({ orgNo, userIds: [creatorId], includeAdmins: false, payload: payloadCreator });
+
+            const titleAdmin = `Sale completed: ${orderNo}`;
+            const messageAdmin = `${actorName} completed ${creatorName}'s sale (${orderNo}).`;
+            const payloadAdmin = {
+              orgNo,
+              title: titleAdmin,
+              message: messageAdmin,
+              type: 'sale:completed:admin',
+              action: { url: `/sales/${updated._id}` },
+              relatedEntity: { entityType: 'ORDER', entityId: updated._id },
+              metadata: { actor: { id: req.profile._id, name: actorName, role: req.profile?.activerole }, target: { id: creatorId, name: creatorName } }
+            };
+            await sendNotification({ orgNo, roles: ['admin'], includeAdmins: false, payload: payloadAdmin });
+          }
+        } catch (notifyErr) {
+          logger.error('Notify on complete sale failed', notifyErr);
+        }
+      })();
+
+    // After marking completed, update customer metrics atomically (best-effort)
+    try {
+      const customerId = sale.customerId;
+      const saleAmount = Number(sale.grandTotal || sale.total || 0);
+      if (customerId && saleAmount > 0) {
+        // Use aggregation-style update pipeline to perform atomic increments and recalculation
+        await SupplierCustomer.findOneAndUpdate(
+          { _id: customerId, orgNo },
+          [
+            {
+              $set: {
+                totalSales: { $add: ["$totalSales", saleAmount] },
+                lastSaleAmount: saleAmount,
+                lastTransactionDate: new Date(),
+                "metrics.totalOrders": { $add: ["$metrics.totalOrders", 1] },
+                "metrics.totalSalesOrders": { $add: ["$metrics.totalSalesOrders", 1] },
+                "metrics.averageOrderValue": {
+                  $let: {
+                    vars: {
+                      prevAvg: { $ifNull: ["$metrics.averageOrderValue", 0] },
+                      prevCount: { $ifNull: ["$metrics.totalOrders", 0] }
+                    },
+                    in: {
+                      $cond: [
+                        { $gt: ["$$prevCount", 0] },
+                        { $divide: [ { $add: [ { $multiply: ["$$prevAvg", "$$prevCount"] }, saleAmount ] }, { $add: [ "$$prevCount", 1 ] } ] },
+                        saleAmount
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          { new: true }
+        ).lean();
+      }
+    } catch (metricErr) {
+      // Log failure, but don't revert completed status — metrics update is best-effort
+      logger.error('Failed to update customer metrics after sale completion', metricErr);
+    }
+
     return success(res, 'Sale completed', updated);
   } catch (err) {
     logger.error('Complete sale error', err);
@@ -184,7 +418,7 @@ const CompleteSale = async (req, res) => {
 // Get all sales with role-based filter
 const GetAllSales = async (req, res) => {
   try {
-    const { page = 1, limit = 25, status, search, fromDate, toDate, customerId, minTotal, maxTotal, sortBy = 'createdAt', sortDir = 'desc' } = req.query;
+    const { page = 1, limit = 25, status, search, fromDate, toDate, customerId, creatorId, minTotal, maxTotal, sortBy = 'createdAt', sortDir = 'desc' } = req.query;
     const skip = (Math.max(1, Number(page)) - 1) * Number(limit);
     const orgNo = req.profile.orgNo;
 
@@ -199,8 +433,20 @@ const GetAllSales = async (req, res) => {
       if (toDate) filter.createdAt.$lte = new Date(toDate);
     }
 
-    // staff: own only, manager/admin: all
-    // if (req.profile.activerole === 'staff') filter.createdBy = req.profile._id;
+    // Role-based filtering for draft data
+    if (req.profile.activerole === 'staff') {
+      filter.createdBy = req.profile._id;
+    } else  {
+      filter.$or = [
+        { createdBy: req.profile._id }, // All their own data
+        { status: { $ne: 'draft' } } // Others' non-draft data
+      ];
+
+      if(creatorId){
+        filter.createdBy = creatorId
+      }
+    }
+    // Admin can see everything (no additional filter)
 
     if (search) {
       filter.$or = [
@@ -228,7 +474,11 @@ const GetAllSales = async (req, res) => {
 
     const totals = (aggregates[0]) || { totalSales: 0, revenue: 0 };
 
-    return success(res, 'Sales retrieved', { items: data, total, totals });
+    return success(res, 'Sales retrieved', { 
+      items: data, 
+      total, totals,
+      pagination: { page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / Number(limit)) }
+    });
   } catch (err) {
     logger.error('Get all sales error', err);
     return sendError(res, err.message || 'Internal server error');
@@ -242,6 +492,7 @@ const GetSaleById = async (req, res) => {
     const orgNo = req.profile.orgNo;
     const sale = await SaleOrder.findOne({ _id: id, orgNo })
       .populate('customerId', 'name email phone address companyName creditLimit currentBalance')
+      .populate('submittedBy', 'name email')
       .populate('createdBy', 'name email')
       .populate('approvedBy', 'name email')
       .populate('rejectedBy', 'name email')
@@ -288,6 +539,19 @@ const MarkOrderAsPaid = async (req, res) => {
     if (!['paid', 'partial', 'unpaid'].includes(status)) {
       return error(res, 'Invalid payment status', null, 400);
     }
+
+    const verifSale = await SaleOrder.findOne({ _id: id, orgNo: req.profile.orgNo })
+    .select('_id status paymentStatus')
+    .lean();
+
+    if(!verifSale){
+      return notFound(res, 'Sale order not found');
+    }
+
+    if(verifSale.status === 'rejected' || verifSale.status === 'draft' && req.profile.activerole !== 'admin'){
+      return forbidden(res, 'Cannot mark payment for rejected or draft orders');
+    }
+    
     const orgNo = req.profile.orgNo;
     // udpate order status
     const order = await SaleOrder.findOneAndUpdate(

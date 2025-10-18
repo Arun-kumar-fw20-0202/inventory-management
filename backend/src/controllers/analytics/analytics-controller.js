@@ -11,11 +11,41 @@ function buildMatch(req) {
     const match = {}
     if (orgNo) match.orgNo = orgNo
 
+    if(req.profile.activerole !== 'admin'){
+        match.createdAt = { $gte: new Date(new Date().setHours(0,0,0,0)), $lte: new Date(new Date().setHours(23,59,59,999)) }
+    }
+
+    // allow admin to filter by userId (explicit query param)
+    if (req.profile && req.profile.activerole === 'admin' && req.query.userId) {
+        try {
+            match.createdBy = new mongoose.Types.ObjectId(req.query.userId)
+        } catch (e) {
+            // ignore invalid userId and continue without adding createdBy
+            console.warn('Invalid userId for admin filter in analytics:', req.query.userId)
+        }
+    }
+
+    // if the requester is a staff, scope results to their own createdBy
+    if (req.profile && req.profile.activerole === 'staff' && req.profile._id) {
+        try {
+            match.createdBy = new mongoose.Types.ObjectId(req.profile._id)
+        } catch (e) {
+            // defensive: if profile._id is not a valid ObjectId, skip scoping
+            console.warn('Invalid profile._id when scoping analytics to staff:', req.profile._id)
+        }
+    }
+
     const { startDate, endDate, status, customerId, warehouseId } = req.query || {}
     if (startDate || endDate) {
         match.createdAt = {}
-        if (startDate) match.createdAt.$gte = new Date(startDate)
-        if (endDate) match.createdAt.$lte = new Date(endDate)
+        if (startDate) match.createdAt.$gte = new Date(new Date(startDate).setHours(0,0,0,0))
+            // add 1 day extra 
+        if (endDate) {
+            const endDateObj = new Date(endDate)
+            endDateObj.setDate(endDateObj.getDate() + 1)
+            endDateObj.setHours(0,0,0,0)
+            match.createdAt.$lte = endDateObj
+        }
     }
     if (status) match.status = status
     if (customerId) match.customerId = mongoose.Types.ObjectId(customerId)
@@ -26,13 +56,15 @@ function buildMatch(req) {
 // 1) Summary: combined metrics in a single DB call using $facet
 const SummeryController = async (req, res) => {
     try {
-        const match = buildMatch(req)
+        const match = buildMatch(req)        
 
         const pipeline = [
             { $match: match },
             {
                 $facet: {
                     salesSummary: [
+                        // only consider completed sales for salesSummary
+                        { $match: { status: 'completed' } },
                         { $unwind: '$items' },
                         {
                             $lookup: {
@@ -78,7 +110,27 @@ const SummeryController = async (req, res) => {
                         }
                     ],
                     statusCounts: [
-                        { $group: { _id: '$status', count: { $sum: 1 } } }
+                        {
+                            $group: {
+                                _id: '$status',
+                                count: {
+                                    $sum: {
+                                        $cond: [
+                                            { $eq: ['$status', 'draft'] },
+                                            {
+                                                $cond: [
+                                                    { $eq: ['$createdBy', req.profile?._id ? new mongoose.Types.ObjectId(req.profile._id) : null] },
+                                                    1,
+                                                    0
+                                                ]
+                                            },
+                                            1
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        { $match: { count: { $gt: 0 } } }
                     ],
                     topCustomers: [
                         { $group: { _id: '$customerId' } },
@@ -115,7 +167,7 @@ const RevenueTrendsController = async (req, res) => {
         const unit = ['year', 'quarter', 'month', 'week', 'day', 'hour'].includes(granularity) ? granularity : 'day'
 
         const pipeline = [
-            { $match: match },
+            { $match: {...match, status: 'completed'} },
             {
                 $group: {
                     _id: {
@@ -147,7 +199,7 @@ const TopSellingProductsController = async (req, res) => {
         const sortBy = metric === 'revenue' ? { revenue: -1 } : { quantity: -1 }
 
         const pipeline = [
-            { $match: match },
+            { $match: {...match,status: 'completed' } },
             { $unwind: '$items' },
             { $group: { _id: '$items.stockId', quantity: { $sum: '$items.quantity' }, revenue: { $sum: '$items.total' } } },
             { $sort: sortBy },
@@ -172,7 +224,7 @@ const CustomerInsightsController = async (req, res) => {
         const { top = 20 } = req.query
 
         const pipeline = [
-            { $match: match },
+            { $match: {...match, status: 'completed'} },
             { $group: { _id: '$customerId', orders: { $sum: 1 }, revenue: { $sum: { $ifNull: ['$grandTotal', 0] } }, avgOrder: { $avg: { $ifNull: ['$grandTotal', 0] } }, lastOrder: { $max: '$createdAt' } } },
             { $sort: { revenue: -1 } },
             { $limit: parseInt(top, 10) },
@@ -204,7 +256,7 @@ const InventoryTurnoverController = async (req, res) => {
         }
 
         const cogsPipeline = [
-            { $match: saleMatch },
+            { $match: {...saleMatch, status: 'completed'} },
             { $unwind: '$items' },
             { $lookup: { from: StockModal.collection.name, localField: 'items.stockId', foreignField: '_id', as: 'stock' } },
             { $unwind: { path: '$stock', preserveNullAndEmptyArrays: true } },
@@ -239,7 +291,7 @@ const SalesByRegionController = async (req, res) => {
         const { level = 'state', top = 20 } = req.query // level: country/state/city
 
         const pipeline = [
-            { $match: match },
+            { $match: {...match, status: 'completed'} },
             { $lookup: { from: SupplierCustomer.collection.name, localField: 'customerId', foreignField: '_id', as: 'customer' } },
             { $unwind: { path: '$customer', preserveNullAndEmptyArrays: true } },
             { $group: { _id: `$customer.address.${level}`, revenue: { $sum: { $ifNull: ['$grandTotal', 0] } }, orders: { $sum: 1 } } },
@@ -263,7 +315,7 @@ const ProfitMarginsController = async (req, res) => {
 
         // compute revenue and COGS in one pipeline
         const pipeline = [
-            { $match: match },
+            { $match: {...match, status: 'completed'} },
             { $unwind: '$items' },
             { $lookup: { from: StockModal.collection.name, localField: 'items.stockId', foreignField: '_id', as: 'stock' } },
             { $unwind: { path: '$stock', preserveNullAndEmptyArrays: true } },

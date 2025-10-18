@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { Input } from '@heroui/input'
 import { Button } from '@heroui/button'
-import { Checkbox } from '@heroui/checkbox'
+import { Checkbox, CheckboxGroup } from '@heroui/checkbox'
 import { useCreatePlan, useUpdatePlan } from '@/libs/mutation/pricing/pricing-mutation'
 import toast from 'react-hot-toast'
 import { Drawer, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader } from '@heroui/drawer'
@@ -21,6 +21,7 @@ export default function MembershipModal({ isOpen, onOpenChange, mode = 'create',
       features: [], // will be handled as array of tags
       validityMonths: 1,
       trialDays: 0,
+      billing_cycle: ['monthly', 'yearly'],
       isActive: true,
     }
   })
@@ -46,6 +47,7 @@ export default function MembershipModal({ isOpen, onOpenChange, mode = 'create',
       // customizable removed
       setValue('isPopular', initialData.isPopular === true)
       setValue('isActive', initialData.isActive !== false)
+      setValue('billing_cycle', initialData.billing_cycle || ['', ''])
     }
     if (!isOpen) {
       reset()
@@ -111,6 +113,7 @@ export default function MembershipModal({ isOpen, onOpenChange, mode = 'create',
       validityMonths: validityNum,
       trialDays: Number(values.trialDays) || 0,
       isActive: !!values.isActive,
+      billing_cycle: Array.isArray(values.billing_cycle) && values.billing_cycle.length > 0 ? values.billing_cycle : ['monthly'],
     }
 
     if (mode === 'create') {
@@ -171,6 +174,15 @@ export default function MembershipModal({ isOpen, onOpenChange, mode = 'create',
                     <Input variant='bordered' {...field} placeholder='12' label='Validity (months)' size='sm' type='number' />
                   )} />
                   {errors.validityMonths && <p className='text-xs text-danger'>{errors.validityMonths.message}</p>}
+                </div>
+              
+                <div className='grid grid-cols-1 gap-2'>
+                  <Controller name='billing_cycle' control={control} render={({ field }) => (
+                    <CheckboxGroup orientation='vertical' value={field.value} onValueChange={(v) => field.onChange(v)}>
+                      <Checkbox value='monthly'>Monthly Billing</Checkbox>
+                      <Checkbox value='yearly'>Yearly Billing</Checkbox>
+                    </CheckboxGroup>
+                  )} />
                 </div>
 
                 <div className='grid grid-cols-2 gap-2'>

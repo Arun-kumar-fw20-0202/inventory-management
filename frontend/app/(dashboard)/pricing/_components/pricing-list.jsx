@@ -1,10 +1,10 @@
-'use client'
+ 'use client'
 import { useFetchPlans } from '@/libs/mutation/pricing/pricing-mutation'
 import { Card, CardHeader, CardBody, CardFooter } from '@heroui/card'
 import { Button } from '@heroui/button'
 import React from 'react'
 import { Chip } from '@heroui/chip'
-import { ShieldUser, User, } from 'lucide-react'
+import { ShieldUser, User, Check } from 'lucide-react'
 import { useDisclosure } from '@heroui/modal'
 import { SelectedDrawer } from './make-payment-drawer'
 
@@ -19,133 +19,150 @@ export const PricingHeader = ({ plan }) => {
 
 const PricingList = () => {
     const [selectedPanel, setSelectedPanel] = React.useState(null)
+    const [billingCycle, setBillingCycle] = React.useState('monthly') // monthly | yearly
     const { isOpen, onOpen, onOpenChange } = useDisclosure()
     const { data: pricings, isLoading, error } = useFetchPlans({
         isActive: true,
     })
 
     if (isLoading) {
-        return <PricingLoadingState />
+        return <LoadingState />
     }
     
-    if (error) return <div>Error loading pricings</div>
+    if (error) return <div className="text-center text-red-500">Error loading pricings</div>
 
     const plans = pricings?.data?.plans || pricings || []
 
+    const toggleBilling = (cycle) => setBillingCycle(cycle)
+
+    const formatCurrency = (value) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value)
 
     return (
         <>
             <SelectedDrawer 
                 plan={selectedPanel} 
+                billingCycle={billingCycle}
                 isOpen={isOpen} 
                 onOpenChange={onOpenChange}
             />
-            <div className="flex items-center  w-full">
-                <div className='w-full p-4 space-y-4'>
-                    <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                        {plans?.map((plan) => (
-                            <Card key={plan?._id} className={`shadow-lg border ${plan?.isPopular ? 'border-2 border-primary-500 relative' : 'border-default'}`}>
+
+            <div className="w-full p-4">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 className="text-2xl font-bold">Choose a plan</h2>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">Simple pricing for teams of all sizes. Upgrade or switch anytime.</p>
+                    </div>
+
+                    {/* Billing toggle */}
+                    <div className="bg-default-100 rounded-full p-1 flex items-center gap-1">
+                        <button
+                            onClick={() => toggleBilling('monthly')}
+                            className={`px-4 py-1 rounded-full text-sm ${billingCycle === 'monthly' ? 'bg-white shadow text-gray-900' : 'text-gray-600 dark:text-gray-300'}`}>
+                            Monthly
+                        </button>
+                        <button
+                            onClick={() => toggleBilling('yearly')}
+                            className={`px-4 py-1 rounded-full text-sm ${billingCycle === 'yearly' ? 'bg-white shadow text-gray-900' : 'text-gray-600 dark:text-gray-300'}`}>
+                            Yearly
+                        </button>
+                    </div>
+                </div>
+
+                <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-6 justify-between'>
+                    {plans?.map((plan) => {
+                        const hasDiscount = plan?.discountPrice && plan?.discountPrice < plan?.price
+                        const displayPrice = hasDiscount ? plan?.discountPrice : plan?.price
+                        const savedPercent = hasDiscount ? Math.round(((plan?.price - plan?.discountPrice) / plan?.price) * 100) : 0
+
+                        const pricePerUnit = (billingCycle === 'yearly') ? displayPrice * 12 : displayPrice
+                        const billingLabel = billingCycle === 'yearly' ? ' / year' : ' / month'
+
+                        return (
+                            <Card key={plan?._id} className={`relative overflow-hidden rounded-xl transform transition hover:scale-[1.02] shadow-lg` }>
+                                {/* Accent stripe */}
+                                <div className={`absolute left-0 top-0 bottom-0 w-1 ${plan?.isPopular ? 'bg-gradient-to-b from-primary-500 to-primary-700' : 'bg-gray-200'} `}></div>
+
+                                {/* Popular ribbon */}
                                 {plan?.isPopular && (
-                                    <div className="flex justify-center">
-                                        <div className="bg-primary-500 text-white text-xs font-bold px-3 py-1 rounded-bl  rounded-br">
-                                            <p>Most Popular</p>
-                                        </div>
+                                    <div className="absolute left-0 top-0 -mr-6 -rotate-12">
+                                        <div className="bg-primary-500 text-white text-xs font-semibold px-4 py-1 rounded shadow-lg">Most Popular</div>
                                     </div>
                                 )}
-                                
-                                <CardHeader className="pb-4">
-                                    <div className='w-full'>
-                                        <div className='text-center'>
-                                            <div className="bg-default-100 rounded-lg p-2 flex items-center justify-center gap-2">
-                                                
-                                                {plan?.discountPrice ? (
-                                                    <div className='flex flex-col gap-2'>
-                                                        <Chip color='success' variant='flat' >{`SAVE ${PricingHeader({ plan })}%`}</Chip>
-                                                        <div className="flex items-baseline gap-2 justify-center">
-                                                            <span className='text-3xl font-bold text-primary'>₹{plan?.discountPrice}</span>
-                                                            <span className='text-lg text-gray-500 line-through'>₹{plan?.price}</span>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <span className='text-3xl font-bold text-primary'>₹{plan?.price}</span>
+
+                                <div className="p-6 flex flex-col justify-between h-full">
+                                    <div>
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <h3 className='text-lg font-semibold'>{plan?.name}</h3>
+                                                <p className='text-sm text-gray-500 dark:text-gray-300 mt-1'>{plan?.description}</p>
+                                            </div>
+                                            <div className='text-right'>
+                                                <div className='inline-flex items-end gap-3'>
+                                                    <span className='text-4xl font-extrabold text-primary'>{formatCurrency(pricePerUnit)}</span>
+                                                </div>
+                                                <div className='text-sm text-gray-500 dark:text-gray-300 mt-1'>{billingLabel}</div>
+                                                {hasDiscount && <div className='mt-2'><Chip color='success' variant='flat'>{`Save ${savedPercent}%`}</Chip></div>}
+                                                {billingCycle === 'yearly' && hasDiscount && (
+                                                    <div className='text-xs text-gray-400 mt-1'>Billed yearly. Savings shown above.</div>
                                                 )}
                                             </div>
-                                            <span className='text-sm text-gray-600 dark:text-gray-400'>
-                                                / {plan?.validityMonths} month{plan?.validityMonths > 1 ? 's' : ''}
-                                            </span>
-                                            {plan?.trialDays > 0 && (
-                                                <p className='text-xs text-green-600 mt-1'>{plan?.trialDays} Days Extra</p>
-                                            )}
                                         </div>
-                                        <h3 className='text-xl font-bold text-gray-800 dark:text-gray-200 mb-2'>{plan?.name}</h3>
-                                        <p className='text-sm text-gray-600 dark:text-gray-400 mb-4'>{plan?.description}</p>
                                         
-                                    </div>
-                                </CardHeader>
-                                
-                                <CardBody className="py-4">
-                                    <div className='grid grid-cols-2 gap-4 mb-4'>
-                                        <div className='flex items-center gap-2'>
-                                            <div className="p-1 5 bg-warning/10 rounded-2xl">
-                                                <ShieldUser className='text-warning'/>
+                                        <div className='mt-4 grid grid-cols-2 gap-4'>
+                                            <div className='flex items-center gap-3'>
+                                                <div className="bg-secondary-100 p-2 rounded-lg">
+                                                    <ShieldUser className='text-secondary' />
+                                                </div>
+                                                <div>
+                                                    <p className='text-xs text-gray-500 dark:text-gray-300'>Managers</p>
+                                                    <p className='text-sm font-semibold '>{plan?.limits.managers === 'unlimited' ? 'Unlimited' : plan?.limits.managers}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className='text-xs font-medium text-gray-600 dark:text-gray-400'>Managers</p>
-                                                <p className='text-sm font-semibold text-gray-800 dark:text-gray-200'>
-                                                    {plan?.limits.managers === 'unlimited' ? 'Unlimited' : plan?.limits.managers}
-                                                </p>
+                                            <div className='flex items-center gap-3'>
+                                                <div className="bg-secondary-100 p-2 rounded-lg">
+                                                    <User className='text-secondary' />
+                                                </div>
+                                                <div>
+                                                    <p className='text-xs text-gray-500 dark:text-gray-300'>Staff</p>
+                                                    <p className='text-sm font-semibold'>{plan?.limits.staff === 'unlimited' ? 'Unlimited' : plan?.limits.staff}</p>
+                                                </div>
                                             </div>
                                         </div>
                                         
-                                        <div className='flex items-center gap-2'>
-                                            <div className="p-1 5 bg-secondary/10 rounded-2xl">
-                                                <User className='text-secondary'/>
-                                            </div>
-                                            <div>
-                                                <p className='text-xs font-medium text-gray-600 dark:text-gray-400'>Staff</p>
-                                                <p className='text-sm font-semibold text-gray-800 dark:text-gray-200'>
-                                                    {plan?.limits.staff === 'unlimited' ? 'Unlimited' : plan?.limits.staff}
-                                                </p>
-                                            </div>
+                                        <div className='mt-4'>
+                                            <ul className='space-y-2'>
+                                                {plan?.features?.slice(0, 6).map((feature, index) => (
+                                                    <li key={index} className='flex items-start gap-3 text-sm text-gray-600 dark:text-gray-300'>
+                                                        <span className='p-1 bg-green-100 text-green-600 rounded-full'><Check className='w-3 h-3' /></span>
+                                                        <span>{feature}</span>
+                                                    </li>
+                                                ))}
+                                                {plan?.features?.length > 6 && (
+                                                    <li className='text-xs text-gray-400'>+{plan?.features?.length - 6} more features</li>
+                                                )}
+                                            </ul>
                                         </div>
                                     </div>
-                                    
-                                    <div>
-                                        <h4 className='text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2'>Features:</h4>
-                                        <ul className='space-y-1 ml-5'>
-                                            {plan?.features?.slice(0, 4).map((feature, index) => (
-                                                <li key={index} className='flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400'>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                    </svg>
-                                                    {feature}
-                                                </li>
-                                            ))}
-                                            {plan?.features?.length > 4 && (
-                                                <li className='text-xs text-gray-500'>
-                                                    +{plan?.features?.length - 4} more features
-                                                </li>
-                                            )}
-                                        </ul>
-                                    </div>
-                                </CardBody>
-                                
-                                <CardFooter className="pt-4">
-                                    <div className='flex gap-2 w-full'>
+
+
+
+                                    <div className='mt-6 flex gap-3'>
                                         <Button 
-                                            color="primary" 
-                                            variant="solid" 
-                                            className="flex-1"
-                                            size="sm"
+                                            color={plan?.isPopular ? 'primary' : 'secondary'} 
+                                            variant='solid' 
+                                            className='flex-1'
                                             onPress={() => { setSelectedPanel(plan); onOpen(); }}
                                         >
-                                            Upgrade Plan
+                                            {plan?.isPopular ? 'Get Started' : 'Upgrade Plan'}
+                                        </Button>
+                                        <Button color='flat' variant='flat' onPress={() => alert('Contact sales')}>
+                                            Contact
                                         </Button>
                                     </div>
-                                </CardFooter>
+                                </div>
                             </Card>
-                        ))}
-                    </div>
+                        )
+                    })}
                 </div>
             </div>
         </>
@@ -156,7 +173,7 @@ export default PricingList
 
 
 
-export const PricingLoadingState = () => {
+const LoadingState = () => {
     return (
         <div className="flex items-center w-full">
             <div className='w-full p-4 space-y-4'>

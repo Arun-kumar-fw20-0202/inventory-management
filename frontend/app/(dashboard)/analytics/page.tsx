@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client'
 import React from 'react'
 import PageAccess from '@/components/role-page-access'
@@ -10,12 +11,15 @@ import TopProducts from './_components/TopProducts'
 import CustomerInsights from './_components/CustomerInsights'
 import InventoryTurnover from './_components/InventoryTurnover'
 import ProfitMargins from './_components/ProfitMargins'
+import SalesByRegin from './_components/sales-by-regin'
+import CheckPagePermission from '@/components/check-page-permissoin'
+import { PERMISSION_MODULES } from '@/libs/utils'
 
 const AnalyticsPage = () => {
   const [filters, setFilters] = React.useState({ granularity: 'day' })
 
   return (
-    <PageAccess allowedRoles={['superadmin', 'admin']}>
+    <CheckPagePermission allowPermission={{ module: PERMISSION_MODULES.REPORTS, action: 'read' }} >
       <div className="p-6">
         <div className="flex items-center gap-3 mb-6">
           <TrendingUp className="w-8 h-8 text-primary" />
@@ -38,10 +42,9 @@ const AnalyticsPage = () => {
           <div className="lg:col-span-3">
             <RevenueTrends params={filters} />
           </div>
-          <div className="lg:col-span-2">
-            <div className="">
-              <TopProducts params={filters} />
-            </div>
+          <div className="lg:col-span-2 flex flex-col gap-3">
+            <TopProducts params={filters} />
+            <SalesByRegin params={filters} />
           </div>
 
           <div className="space-y-6">
@@ -51,7 +54,7 @@ const AnalyticsPage = () => {
           </div>
         </div>
       </div>
-    </PageAccess>
+    </CheckPagePermission>
   )
 }
 

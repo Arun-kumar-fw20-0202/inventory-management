@@ -80,7 +80,7 @@ export const useUpdatePaymentStatus = () => {
     },
     onSuccess: (data, id) => {
       qc.invalidateQueries({ queryKey: ['sales'] })
-      qc.invalidateQueries({ queryKey: ['sale', id] })
+      qc.invalidateQueries({ queryKey: ['sale'] })
       qc.invalidateQueries({ queryKey: ['sales-analytics'] })
       qc.invalidateQueries({ queryKey: ['use-fetch-my-stock'] })
       toast.success(data?.message || 'Payment status updated')
@@ -183,7 +183,9 @@ export const useFetchSaleById = (id) => {
     },
     enabled: !!id,
     staleTime: 1 * 60 * 1000,
-    cacheTime: 5 * 60 * 1000
+    cacheTime: 5 * 60 * 1000,
+    keepPreviousData: true,
+    refetchOnWindowFocus: false,
   })
 }
 

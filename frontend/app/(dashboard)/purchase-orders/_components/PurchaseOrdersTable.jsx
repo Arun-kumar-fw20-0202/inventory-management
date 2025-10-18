@@ -6,16 +6,12 @@ import { Input } from '@heroui/input'
 import { Select, SelectItem } from '@heroui/select'
 import { 
   Search, 
-  Filter, 
   Download, 
   RefreshCw,
   Eye,
   Check,
   X,
   Package,
-  TableIcon,
-  GridIcon,
-  TableOfContents,
 } from 'lucide-react'
 import { 
   useFetchPurchaseOrders,
@@ -23,23 +19,29 @@ import {
   useApprovePurchaseOrder,
   useRejectPurchaseOrder
 } from '@/libs/mutation/purchase-order/purchase-order-mutation'
-import PurchaseOrderDetailsModal from './PurchaseOrderDetailsModal'
+import ConfirmActionModal from '@/app/(dashboard)/sales/all/_components/ConfirmActionModal'
+// import PurchaseOrderDetailsModal from './PurchaseOrderDetailsModal'
 import PurchaseOrdersCardView from './PurchaseOrdersCardView'
 import PurchaseOrdersTableView from './PurchaseOrdersTableView'
 import { useSelector } from 'react-redux'
+import { useRouter } from 'next/navigation'
+import UsersAutocomplete from '@/components/dynamic/user-autocomplete'
 
 const PurchaseOrdersTable = () => {
   const activerole = useSelector((state) => state.auth.user?.data?.activerole);
   const [filters, setFilters] = useState({
     page: 1,
-    limit: 10,
-    // status: '',
+    limit: 30,
+    status: undefined,
     search: '',
-   //  startDate: '',
-   //  endDate: ''
+    startDate: undefined,
+    endDate: undefined,
+    sortBy: 'createdAt',
+    sortOrder: 'desc' // 'asc' | 'desc'
   })
-  const [selectedOrder, setSelectedOrder] = useState(null)
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+
+  // const [selectedOrder, setSelectedOrder] = useState(null)
+  // const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
 
   // Queries
   const { 
@@ -48,6 +50,9 @@ const PurchaseOrdersTable = () => {
     error,
     refetch 
   } = useFetchPurchaseOrders(filters)
+
+  // router
+  const router = useRouter();
 
   // Mutations
   const submitPurchaseOrder = useSubmitPurchaseOrder()
@@ -71,97 +76,91 @@ const PurchaseOrdersTable = () => {
   }
 
   const handleViewDetails = (order) => {
-    setSelectedOrder(order)
-    setIsDetailsModalOpen(true)
+    router.push(`/purchase-orders/${order._id}`);
   }
 
-  const handleSubmitOrder = async (orderId) => {
-    try {
-      await submitPurchaseOrder.mutateAsync(orderId)
-    } catch (error) {
-      console.error('Failed to submit order:', error)
+  // Confirmation modal state
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmTitle, setConfirmTitle] = useState('')
+  const [confirmMessage, setConfirmMessage] = useState('')
+  const [confirmShowReason, setConfirmShowReason] = useState(false)
+  const [confirmPayload, setConfirmPayload] = useState(null)
+
+  const openConfirm = ({ title, message, showReason = false, payload = null }) => {
+    setConfirmTitle(title)
+    setConfirmMessage(message)
+    setConfirmShowReason(showReason)
+    setConfirmPayload(payload)
+    setConfirmOpen(true)
+  }
+
+  const handleConfirm = async (reason) => {
+    if (!confirmPayload || !confirmPayload.action) {
+      setConfirmOpen(false)
+      return
     }
-  }
 
-  const handleApproveOrder = async (orderId) => {
     try {
-      await approvePurchaseOrder.mutateAsync(orderId)
-    } catch (error) {
-      console.error('Failed to approve order:', error)
-    }
-  }
-
-  const handleRejectOrder = async (orderId) => {
-    const reason = prompt('Please provide a reason for rejection:')
-    if (reason) {
-      try {
-        await rejectPurchaseOrder.mutateAsync({ id: orderId, reason })
-      } catch (error) {
-        console.error('Failed to reject order:', error)
+      const { action, id } = confirmPayload
+      if (action === 'submit') {
+        await submitPurchaseOrder.mutateAsync(id)
+      } else if (action === 'approve') {
+        await approvePurchaseOrder.mutateAsync(id)
+      } else if (action === 'reject') {
+        await rejectPurchaseOrder.mutateAsync({ id, reason: reason || '' })
       }
+      refetch && refetch()
+    } catch (err) {
+      console.error('Action failed', err)
+    } finally {
+      setConfirmOpen(false)
+      setConfirmPayload(null)
     }
   }
 
   const getActionButtons = (order) => {
-    const buttons = []
+    const actions = []
 
-    // View Details button (always available)
-    buttons.push(
-      <Button
-        key="view"
-        size="sm"
-        variant="flat"
-        isIconOnly
-        onPress={() => handleViewDetails(order)}
-      >
-        <Eye className="w-4 h-4" />
-      </Button>
-    )
+    // View action
+    actions.push({
+      key: 'view',
+      label: 'View',
+      icon: <Eye className="w-4 h-4" />,
+      onClick: () => handleViewDetails(order),
+    })
 
-    // Status-specific action buttons
+    // Submit (open confirm)
     if (order.status === 'Draft' && (activerole === 'manager' || activerole === 'admin')) {
-      buttons.push(
-        <Button
-          key="submit"
-          size="sm"
-          color="primary"
-          variant="flat"
-          onPress={() => handleSubmitOrder(order._id)}
-          isLoading={submitPurchaseOrder.isPending}
-        >
-          Submit
-        </Button>
-      )
+      actions.push({
+        key: 'submit',
+        label: 'Submit',
+        icon: null,
+        onClick: () => openConfirm({ title: 'Submit Purchase Order', message: 'Submit this purchase order for approval?', showReason: false, payload: { action: 'submit', id: order._id } }),
+        isLoading: submitPurchaseOrder.isPending,
+      })
     }
 
+    // Approve / Reject
     if (order.status === 'PendingApproval' && activerole === 'admin') {
-      buttons.push(
-        <Button
-          key="approve"
-          size="sm"
-          color="success"
-          variant="flat"
-          startContent={<Check className="w-3 h-3" />}
-          onPress={() => handleApproveOrder(order._id)}
-          isLoading={approvePurchaseOrder.isPending}
-        >
-          Approve
-        </Button>,
-        <Button
-          key="reject"
-          size="sm"
-          color="danger"
-          variant="flat"
-          startContent={<X className="w-3 h-3" />}
-          onPress={() => handleRejectOrder(order._id)}
-          isLoading={rejectPurchaseOrder.isPending}
-        >
-          Reject
-        </Button>
-      )
+      actions.push({
+        key: 'approve',
+        label: 'Approve',
+        icon: <Check className="w-3 h-3" />,
+        onClick: () => openConfirm({ title: 'Approve Purchase Order', message: 'Approve this purchase order?', showReason: false, payload: { action: 'approve', id: order._id } }),
+        isLoading: approvePurchaseOrder.isPending,
+      })
+
+      actions.push({
+        key: 'reject',
+        label: 'Reject',
+        icon: <X className="w-3 h-3" />,
+        onClick: () => openConfirm({ title: 'Reject Purchase Order', message: 'Please provide a reason for rejection (optional)', showReason: true, payload: { action: 'reject', id: order._id } }),
+        isLoading: rejectPurchaseOrder.isPending,
+        color: 'danger'
+      })
     }
 
-    return buttons
+    return actions
   }
 
   if (error) {
@@ -189,24 +188,19 @@ const PurchaseOrdersTable = () => {
       <Card>
         <CardHeader className="flex flex-col gap-4">
           <div className="flex justify-between items-center w-full">
-            <h2 className="text-xl font-semibold">Purchase Orders</h2>
+            <div className="">
+              <h2 className="text-xl font-semibold">Purchase Orders</h2>
+              <span className='text-gray-500 dark:text-gray-300'>
+                {purchaseOrdersResponse?.data?.pagination?.totalItems || 0} total orders
+              </span>
+            </div>
             <div className="flex gap-2">
-              <Button size='sm' isIconOnly color='primary' variant={viewMode === 'table' ? 'solid' : 'flat'} onPress={() => setViewMode('table')} startContent={<TableOfContents size={18} />} />
-              <Button size='sm' isIconOnly color='primary' variant={viewMode === 'card' ? 'solid' : 'flat'} onPress={() => setViewMode('card')} startContent={<GridIcon size={18} />}/>
-              <Button
-                variant="light"
-                startContent={<RefreshCw className="w-4 h-4" />}
-                onPress={refetch}
-                isLoading={isLoading}
-              >
+              {/* <Button size='sm' isIconOnly color='primary' variant={viewMode === 'table' ? 'solid' : 'flat'} onPress={() => setViewMode('table')} startContent={<TableOfContents size={18} />} />
+              <Button size='sm' isIconOnly color='primary' variant={viewMode === 'card' ? 'solid' : 'flat'} onPress={() => setViewMode('card')} startContent={<GridIcon size={18} />}/> */}
+              <Button variant="light" startContent={<RefreshCw className="w-4 h-4" />} onPress={refetch} isLoading={isLoading}>
                 Refresh
               </Button>
-              <Button
-                variant="light"
-                startContent={<Download className="w-4 h-4" />}
-              >
-                Export
-              </Button>
+              <Button variant="light" startContent={<Download className="w-4 h-4" />}>Export</Button>
             </div>
           </div>
 
@@ -220,15 +214,42 @@ const PurchaseOrdersTable = () => {
               onValueChange={(value) => handleFilterChange('search', value)}
               className="max-w-xs"
             />
+
+            <Select 
+              variant='bordered'
+              placeholder="Sort Order"
+              value={filters.sortOrder}
+              defaultSelectedKeys={new Set([filters.sortOrder])}
+              onChange={(value) => handleFilterChange('sortOrder', value?.target?.value)}
+              className="max-w-xs"
+            >
+              <SelectItem key='asc' value='asc'>Sort Ascending</SelectItem>
+              <SelectItem key='desc' value='desc'>Sort Descending</SelectItem>
+            </Select>
+
+            <Select
+              variant='bordered'
+              placeholder="Sort By"
+              value={filters.sortBy}
+              defaultSelectedKeys={new Set([filters.sortBy])}
+              onChange={(value) => handleFilterChange('sortBy', value?.target?.value)}
+              className="max-w-xs"
+            >
+              <SelectItem key='createdAt' value='createdAt'>Sort by Created At</SelectItem>
+              <SelectItem key='updatedAt' value='updatedAt'>Sort by Updated At</SelectItem>
+              <SelectItem key='expectedDeliveryDate' value='expectedDeliveryDate'>Sort by Expected Delivery</SelectItem>
+              <SelectItem key='totalAmount' value='totalAmount'>Sort by Total Amount</SelectItem>
+            </Select>
             
             <Select
               variant='bordered'
               placeholder="Filter by status"
               value={filters.status}
-              onSelectionChange={(value) => handleFilterChange('status', value)}
+              onChange={(value) => handleFilterChange('status', value?.target?.value)}
               className="max-w-xs"
             >
-              <SelectItem key="" value="">All Statuses</SelectItem>
+              {/* all */}
+              <SelectItem key="all" value="all">All</SelectItem>
               <SelectItem key="Draft" value="Draft">Draft</SelectItem>
               <SelectItem key="PendingApproval" value="PendingApproval">Pending Approval</SelectItem>
               <SelectItem key="Approved" value="Approved">Approved</SelectItem>
@@ -236,6 +257,7 @@ const PurchaseOrdersTable = () => {
               <SelectItem key="Completed" value="Completed">Completed</SelectItem>
               <SelectItem key="Cancelled" value="Cancelled">Cancelled</SelectItem>
             </Select>
+
 
             <Input
               variant='bordered'
@@ -254,6 +276,17 @@ const PurchaseOrdersTable = () => {
               onValueChange={(value) => handleFilterChange('endDate', value)}
               className="max-w-xs"
             />
+
+            {activerole !== 'staff' && (
+              <UsersAutocomplete 
+                variant='bordered'
+                // size='sm'
+                placeholder="Search user"
+                // label='User'
+                onSelectChange={(id) => handleFilterChange('creatorId', id)}
+              />
+            )}
+            
           </div>
         </CardHeader>
 
@@ -293,12 +326,22 @@ const PurchaseOrdersTable = () => {
         </CardBody>
       </Card>
 
+      {/* Confirmation modal for actions */}
+      <ConfirmActionModal
+        open={confirmOpen}
+        title={confirmTitle}
+        message={confirmMessage}
+        showReason={confirmShowReason}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={handleConfirm}
+      />
+
       {/* Details Modal */}
-      <PurchaseOrderDetailsModal
+      {/* <PurchaseOrderDetailsModal
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
         orderId={selectedOrder?._id}
-      />
+      /> */}
     </>
   )
 }

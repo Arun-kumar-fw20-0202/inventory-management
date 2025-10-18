@@ -8,18 +8,18 @@ import {
   TableRow,
   TableCell,
 } from "@heroui/table";
-import { User } from "@heroui/user";
 import { Chip } from "@heroui/chip";
 
 import { Button } from '@heroui/button'
-import { useFetchSales } from '@/libs/mutation/sales/sales-mutations'
 import { useSelector } from 'react-redux';
 import { Avatar } from '@heroui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@heroui/popover';
 import { Radio, RadioGroup } from '@heroui/radio';
-import { EllipsisVertical, Thermometer } from 'lucide-react';
+import { EllipsisVertical, ReceiptText, Thermometer } from 'lucide-react';
 import { EyeIcon } from '@/components/icons';
 import Link from 'next/link';
+import { formatDateRelative } from '@/libs/utils';
+import dayjs from 'dayjs';
 
 export const columns = [
   { name: 'ORDER', uid: 'order' },
@@ -36,26 +36,17 @@ const statusColorMap = {
   submitted: 'warning',
   processing: 'primary',
   completed: 'success',
-  cancelled: 'danger',
+  rejected: 'danger',
   draft: 'default',
   approved: 'success',
 };
 
 const paymentColor = (status) => (status === 'paid' ? 'success' : status == 'partial' ? 'warning' : 'danger');
 
-const formatDate = (dateString) => {
-  if (!dateString) return '-'
-  try {
-    return new Date(dateString).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-  } catch (e) {
-    return dateString
-  }
-}
-
-export default function SalesTable({ initialFilters = { page: 1, limit: 20 }, actions = {} }) {
+export default function SalesTable({ initialFilters = { page: 1, limit: 25 }, actions = {}, isLoading, refetch, data, topContent, bottomContent }) {
     const { SubmitSale, submetting, ApproveSale, approving, approved, RejectSale, rejecting, rejected, CompleteSale, completing, completed, MarkOrderAsPaid, markingAsPaid, markedAsPaid } = actions
     const [filters, setFilters] = React.useState(initialFilters)
-    const { data, isLoading, refetch } = useFetchSales(filters)
+    // const { data, isLoading, refetch } = useFetchSales(filters)
     const user = useSelector((state) => state.auth.user);
 
 
@@ -65,47 +56,70 @@ export default function SalesTable({ initialFilters = { page: 1, limit: 20 }, ac
     }
 
 
-    React.useEffect(() => { refetch() }, [filters])
+    // React.useEffect(() => { refetch() }, [filters])
 
     const items = data?.data?.items || []
 
+    
     const renderCell = React.useCallback((order, columnKey) => {
+        const StatusBaseDate = (status) => {
+            switch (status) {
+            case 'submitted':
+                return order?.submittedAt
+            case 'approved':
+                return order?.approvedAt
+            case 'completed':
+                return order?.completedAt
+            case 'rejected':
+                return order?.rejectedAt
+            default:
+                return order?.createdAt
+            }
+        }
 
         switch (columnKey) {
         case 'order':
             return (
-            <div className="flex flex-col">
-                <div className="font-medium">{order?.orderNo}</div>
-                {/* <div className="text-xs text-default-400">Org: {order?.orgNo || '-'}</div> */}
-            </div>
+                <div className="flex text-nowrap">
+                    <ReceiptText  className="w-5 h-5 text-primary-600 dark:text-primary-400 mr-2" />
+                    <div className="flex flex-col">
+                        <div className="font-medium">{order?.invoiceNo || '-'}</div>
+                        <div className="text-xs text-default-400 dark:text-gray-300">{order?.orderNo}</div>
+                    </div>
+                </div>
             )
         case 'customer':
             return (
-            <User
-                avatarProps={{ radius: 'lg', name: order?.customerId?.name?.charAt(0) }}
-                name={order?.customerId?.name || '-'}
-                description={order?.customerId?.email || order?.customerId?.phone || '-'}
-            />
+                <div className='text-nowrap flex items-center gap-2'>
+                    <Avatar color='primary' className='h-6 w-6' name={order?.customerId?.name.charAt(0)} />
+                    <div>
+                        <p className="font-medium">{order?.customerId?.name || '-'}</p>
+                        <p className="text-xs text-default-400 dark:text-gray-300">{order?.customerId?.email || order?.customerId?.phone || '-'}</p>
+                    </div>
+                </div>
             )
         case 'items':
             return (
-            <div className="flex flex-col">
+            <div className="text-nowrap flex flex-col">
                 <div className="font-medium">{order?.items?.length || 0} item(s)</div>
-                <div className="text-xs text-default-400">{order?.items?.[0]?.stockId?.productName || ''}</div>
+                <div className="text-xs text-default-400 dark:text-gray-300">{order?.items?.[0]?.stockId?.productName || ''}</div>
             </div>
             )
         case 'total':
             return (
-            <div className="text-right">
+            <div className="text-nowrap text-right">
                 <div className="font-semibold">₹{(order?.grandTotal || 0).toFixed(2)}</div>
-                <div className="text-xs text-default-400">Sub: ₹{(order?.subTotal || 0).toFixed(2)}</div>
+                <div className="text-xs text-default-400 dark:text-gray-300">Sub: ₹{(order?.subTotal || 0).toFixed(2)}</div>
             </div>
             )
         case 'status':
             return (
-            <Chip className="capitalize" color={statusColorMap[order?.status] || 'default'} size="sm" variant="flat">
-                {order?.status}
-            </Chip>
+                <div className='flex gap-2 items-center'>
+                    <Chip className="capitalize" color={statusColorMap[order?.status] || 'default'} size="sm" variant="flat">
+                        {order?.status}
+                    </Chip>
+                    <span className='text-xs font-bold'>{`( ${formatDateRelative(StatusBaseDate(order?.status))} )`}</span>
+                </div>
             )
         case 'payment':
             return (
@@ -115,14 +129,14 @@ export default function SalesTable({ initialFilters = { page: 1, limit: 20 }, ac
             )
         case 'created':
             return (
-            <div className="text-xs">
-                <div>{formatDate(order?.createdAt)}</div>
-                <div className="text-default-400 flex items-center">By: <Avatar className='h-4 w-4 ml-2 mr-1.5' /> {order?.createdBy?.name} {order?.createdBy?._id == user?.data?.id && '( You )'}</div>
+            <div className="text-nowrap text-xs">
+                <div>{dayjs(order?.createdAt).format("DD MMM YYYY")} {`( ${formatDateRelative(order?.createdAt)} )`}</div>
+                <div className="text-default-400 dark:text-gray-300 flex items-center">By: <Avatar className='h-4 w-4 ml-2 mr-1.5' /> {order?.createdBy?.name} {order?.createdBy?._id == user?.data?.id && '( You )'}</div>
             </div>
             )
         case 'actions':
             return (
-            <div className="flex items-center gap-2 justify-center">
+            <div className="text-nowrap flex items-center gap-2 justify-center">
                 <Button 
                     isIconOnly
                     size='sm'
@@ -143,22 +157,22 @@ export default function SalesTable({ initialFilters = { page: 1, limit: 20 }, ac
                                     <Button size="sm" color="secondary" onPress={() => SubmitSale(order?._id)} disabled={submetting}> {submetting ? 'Submitting...' : 'Submit'} </Button>
                                 )}
 
-                                {order?.status === 'submitted' && (
+                                {user?.data?.activerole !== 'staff' && order?.status === 'submitted' && (
                                     <Button size="sm" color="primary" onPress={() => ApproveSale(order?._id)} disabled={approving}>{approving ? 'Approving...' : 'Approve'}</Button>
                                 )}
 
-                                {['draft','submitted'].includes(order?.status) && (
+                                {['draft','submitted'].includes(order?.status) && user?.data?.activerole !== 'staff' && (
                                     <Button size="sm" color="danger" variant="solid" onPress={() => {
-                                    const reason = window.prompt('Reason for rejection (optional)') || ''
-                                    RejectSale({ id: order?._id, reason })
-                                }} disabled={rejecting}>{rejecting ? 'Rejecting...' : 'Reject'}</Button>
+                                        const reason = window.prompt('Reason for rejection (optional)') || ''
+                                        RejectSale({ id: order?._id, reason })
+                                    }} disabled={rejecting}>{rejecting ? 'Rejecting...' : 'Reject'}</Button>
                                 )}
 
                                 {order?.status === 'approved' && (
                                     <Button size="sm" color="success" onPress={() => CompleteSale(order?._id)} disabled={completing}>{completing ? 'Completing...' : 'Complete'}</Button>
                                 )}
                             </div>
-                            <RadioGroup label='Payment Status' orientation="horizontal" defaultValue={order?.paymentStatus || 'unpaid'}>
+                            <RadioGroup label='Payment Status' orientation="horizontal" defaultValue={order?.paymentStatus || 'unpaid'} isDisabled={order?.status == 'rejected' || order?.status == 'draft'}>
                                 {["unpaid", "partial", "paid"].map(status => (
                                     <Radio key={status} value={status} onChange={() => HandleUpdatePayment(status, order?._id)}>{status}</Radio>
                                 ))}
@@ -173,6 +187,20 @@ export default function SalesTable({ initialFilters = { page: 1, limit: 20 }, ac
         }
     }, [SubmitSale, ApproveSale, RejectSale, CompleteSale, submetting, approving, rejecting, completing])
 
+    const StatusbasesBgColor = (status) => {
+        switch (status) {
+        case 'submitted':
+            return 'bg-warning/10 text-warning'
+        case 'approved':
+            return 'bg-blue-500/10 text-blue-500'
+        // case 'PartiallyReceived': 
+        //   return 'bg-secondary/10 text- '
+        case 'completed':
+            return 'bg-success/10 text-success'
+        case 'rejected':
+            return 'bg-danger/10 text-danger'
+        }
+    }
 
     if(isLoading) {
         return <LoadingState />
@@ -180,10 +208,8 @@ export default function SalesTable({ initialFilters = { page: 1, limit: 20 }, ac
 
   return (
     <div>
-      {items.length === 0 ? (
-        <div className="text-center text-default-400">No sales found.</div>
-      ) : (
-        <Table aria-label="Sales table" isStriped>
+      {(
+        <Table aria-label="Sales table" isStriped selectionMode='multiple' topContent={topContent} bottomContent={bottomContent}>
           <TableHeader columns={columns}>
             {(column) => (
               <TableColumn key={column.uid} align={column.uid === 'actions' ? 'center' : 'start'}>
@@ -191,9 +217,11 @@ export default function SalesTable({ initialFilters = { page: 1, limit: 20 }, ac
               </TableColumn>
             )}
           </TableHeader>
-          <TableBody items={items}>
+          <TableBody items={items} emptyContent={<div className='min-h-[30vh] flex justify-center items-center'>
+            <p>No Sales Founded</p>
+          </div>}>
             {(order) => (
-              <TableRow key={order?._id}>
+              <TableRow key={order?._id} className={` border-b border-default-100`}>
                 {(columnKey) => <TableCell>{renderCell(order, columnKey)}</TableCell>}
               </TableRow>
             )}

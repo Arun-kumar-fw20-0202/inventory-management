@@ -11,6 +11,7 @@ import { useAuthLogout } from "@/libs/mutation/auth/use-login";
 import { Popover, PopoverContent, PopoverTrigger } from "@heroui/popover";
 import { useSelector } from "react-redux";
 import { Badge } from "@heroui/badge";
+import { CornerDownRight } from "lucide-react";
 
 export const PrintMenues = ({menuList, onOpenChange, collapsed = false}) => {
     const pathname = usePathname();
@@ -29,23 +30,23 @@ export const PrintMenues = ({menuList, onOpenChange, collapsed = false}) => {
           // When collapsed and this item has submenus, show a popover trigger (icon-only)
           <Popover placement="right" key={`pop-${index}`}>
             <PopoverTrigger>
-              <Button
-                // size="sm"
-                isIconOnly
-                className={`hover:bg-default-100`}
-                variant={pathname === item?.url ? 'flat' : 'light'}
-                color={pathname === item?.url ? 'primary' : 'light'}
-                isDisabled={item?.isComingsoon}
-                title={item?.title}
-              >
-                <Badge color="warning" placement="bottom-right" content={item?.menues?.length}>
-                  <item.icon size={18} />
-                </Badge>
-              </Button>
-            </PopoverTrigger>
+                <Button
+                  // size="sm"
+                  isIconOnly
+                  className={`hover:bg-default-100`}
+                  variant={pathname === item?.url ? 'flat' : 'light'}
+                  color={pathname === item?.url ? 'primary' : 'light'}
+                  isDisabled={item?.isComingsoon}
+                  title={item?.title}
+                >
+                  <Badge color="warning" placement="bottom-right" content={(item?.menues || []).filter(m => m.visible !== false).length}>
+                    <item.icon size={18} />
+                  </Badge>
+                </Button>
+              </PopoverTrigger>
             <PopoverContent>
               <div className="flex flex-col gap-1">
-                {item.menues.map((subItem, subIndex) => (
+                {item.menues.filter(m => m.visible !== false).map((subItem, subIndex) => (
                   <Button
                     key={subIndex}
                     size="sm"
@@ -89,10 +90,12 @@ export const PrintMenues = ({menuList, onOpenChange, collapsed = false}) => {
         )}
 
         {/* Submenu Items */}
-          {expanded[index] && item?.menues?.length > 0 && !collapsed && (
+            {expanded[index] && (item?.menues || []).filter(m => m.visible !== false).length > 0 && !collapsed && (
             <div className="flex flex-col gap-1 pl-6">
-              {item?.menues.map((subItem, subIndex) => (
-                <Button size='sm' variant='flat' color={pathname === subItem?.path ? 'primary' : 'light'} as={Link} href={subItem?.path} key={subIndex} className={`flex justify-start p-2 rounded-md cursor-pointer transition-all hover:bg-default-100`} onPress={() => onOpenChange()}>
+              {item?.menues.filter(m => m.visible !== false).map((subItem, subIndex) => (
+                <Button 
+                  startContent={<CornerDownRight size={18} />}
+                size='sm' variant='flat' color={pathname === subItem?.path ? 'primary' : 'light'} as={Link} href={subItem?.path} key={subIndex} className={`flex justify-start p-2 rounded-md cursor-pointer transition-all hover:bg-default-100`} onPress={() => onOpenChange()}>
                   {subItem?.name}
                 </Button>
               ))}
@@ -121,7 +124,7 @@ export const PrintMenues = ({menuList, onOpenChange, collapsed = false}) => {
                     avatarProps={{ src: organisation?.details?.logoUrl || "https://avatars.githubusercontent.com/u/30373425?v=4" }}
                     description={
                       <div className="flex flex-col gap-1">
-                          <p className="text-gray-900 dark:text-gray-300">{user?.data?.phone}</p>
+                          <p className="text-gray-900 dark:text-gray-300">{user?.data?.email}</p>
                           <Chip className='rounded-lg p-1' size="xs" color="primary">{user?.data?.activerole}</Chip>
                       </div>
                     }

@@ -1,14 +1,22 @@
  'use client'
-import React from 'react'
+import React, { useMemo } from 'react'
 import { useApproveSale, useCompleteSale, useFetchSales, useRejectSale, useSubmitSale, useUpdatePaymentStatus } from '@/libs/mutation/sales/sales-mutations'
 import SaleFilters from './SaleFilters'
 import { OrderCard } from './order-card'
 import SalesTable from './SalesTable'
 import { Card } from '@heroui/card'
+import { Pagination } from '@heroui/pagination'
+import SupplierCustomerAutocomplete from '@/components/dynamic/supplier-customer/supplier-customer-autocomplete'
+import { formatNumberShort } from '@/libs/utils'
+import { useSelector } from 'react-redux'
+import UsersAutocomplete from '@/components/dynamic/user-autocomplete'
 
 const SalesList = () => {
   const [filters, setFilters] = React.useState({ page: 1, limit: 20 })
   const { data, isLoading, refetch } = useFetchSales(filters)
+  const activerole = useSelector((state) => state.auth.user?.data?.activerole);
+  
+  const paginationData = useMemo(() => data?.data?.pagination , [data])
 
   const { mutate: SubmitSale, isPending: submetting, isSuccess: submited } = useSubmitSale()
   const { mutate: ApproveSale, isPending: approving, isSuccess: approved } = useApproveSale()
@@ -19,11 +27,7 @@ const SalesList = () => {
   React.useEffect(() => { refetch() }, [filters])
 
   const items = data?.data?.items || []
-  const total = data?.data?.total || 0
   const totals = data?.data?.totals || { totalSales: 0, revenue: 0 }
-
-
-  const onPage = (next) => setFilters(prev => ({ ...prev, page: next }))
 
   const [view, setView] = React.useState('table') // 'cards' | 'table'
 
@@ -32,6 +36,57 @@ const SalesList = () => {
     SubmitSale(orderId)
   }
 
+  const bottomContent = (
+    <div className='flex overflow-hidden items-center justify-between'>
+      <Pagination color="primary" isCompact page={paginationData?.page} total={paginationData?.totalPages} onChange={(next) => setFilters(prev => ({ ...prev, page: next }))} showControls />
+      <select onChange={(e) => 
+        setFilters(prev => ({ ...prev, limit: parseInt(e.target.value), page: 1 }))} value={filters.limit} className='max-w-xs p-1 px-3 border border-default-100'>
+        {[2,10, 20, 50, 100].map(l => (
+            <option className='dark:text-black' key={l} value={l}>{l}</option>
+        ))}
+      </select>
+    </div>
+  )
+
+  const topContent = (
+    <div className="flex justify-between flex-wrap gap-4">
+      <div className="">
+        <div>
+          <span className="text-2xl font-bold">All Transactions</span>
+          <span className="text-gray-600 dark:text-gray-400"> · View all sales transactions</span>
+        </div>
+        <p className="text-sm">Total Sales: {totals.totalSales} · Revenue: {totals.revenue ? formatNumberShort(totals.revenue) : 0}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-300">Showing: {items.length}</p>
+      </div>
+      <div className='flex gap-3'>
+        <SupplierCustomerAutocomplete 
+          variant='bordered'
+          className='mx-w-xs'
+          label='customer/supplier'
+          placeholder="Select Customer"
+          type='both' 
+          onSelectChange={(c) => setCustomer(c)} 
+          key={filters?.customerId}
+          defaultSelectedKey={filters?.customerId}
+          userData={(data) => setFilters({...filters, customerId: data?._id || null, page: 1})}
+        />
+
+        {activerole !== 'staff' && (
+          <UsersAutocomplete 
+            className='mx-w-xs'
+            variant='bordered'
+            label='Select User'
+            defaultSelectedKey={filters?.creatorId}
+            key={filters?.creatorId}
+            
+            placeholder="Filter with Creator"
+            onSelectChange={(id) => setFilters({...filters, creatorId: id || null, page: 1})}
+          />
+        )}
+      </div>
+    </div>
+  )
+  
 
   return (
     <div className="space-y-4">
@@ -41,14 +96,13 @@ const SalesList = () => {
         mode={view}
       />
 
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-600 dark:text-gray-400">Total: {total} · Sales: {totals.totalSales} · Revenue: {totals.revenue ? totals.revenue.toFixed(2) : 0}</div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">Showing: {items.length}</div>
-      </div>
-
-
       {view === 'table' ? (
         <SalesTable 
+          topContent={topContent}
+          bottomContent={bottomContent}
+          data={data}
+          isLoading={isLoading}
+          refetch={refetch}
           initialFilters={filters} 
           actions = {{
             SubmitSale,
@@ -69,14 +123,7 @@ const SalesList = () => {
         />
       ) : isLoading ? (
         <LoadingState />
-      ) : items.length === 0 ? (
-        <Card className="text-center text-gray-500 min-h-[50vh] flex flex-col justify-center items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto mb-2 h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          No sales found.
-        </Card>
-      ) : (
+      ) :  (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
           {items.map((order) => (
             <OrderCard key={order._id} order={order} 

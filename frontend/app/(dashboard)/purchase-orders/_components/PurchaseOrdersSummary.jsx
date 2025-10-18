@@ -93,7 +93,7 @@ const PurchaseOrdersSummary = () => {
               {/* <h3 className={`text-2xl font-bold ${card.color} mb-1`}>
                 {card.value}
               </h3> */}
-              <p className="text-gray-600 text-sm">{card.title}</p>
+              <p className="text-gray-600 dark:text-gray-300 text-sm">{card.title}</p>
             </div>
           </CardBody>
         </Card>

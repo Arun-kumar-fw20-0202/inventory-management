@@ -65,6 +65,7 @@ const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubm
   // Populate form when editing
    useEffect(() => {
       if (mode === 'edit' && stockData) {
+         console.log(stockData)
          reset({
             productName: stockData.productName || '',
             sku: stockData.sku || '',
@@ -223,6 +224,7 @@ const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubm
                         rules={{ required: 'Warehouse is required' }}
                         render={({ field }) => (
                            <>
+                              {field.value}
                               <WarehouseAutocomplete 
                                  onSelectChange={(value) => setValue('warehouse', value)}
                                  variant='bordered'

@@ -3,7 +3,7 @@ import React from 'react'
 import { Card, CardHeader, CardBody, CardFooter } from '@heroui/card'
 import { Button } from '@heroui/button'
 import { formatCurrency } from '@/libs/utils'
-import { ShieldUser, User } from 'lucide-react'
+import { Check, ShieldUser, User } from 'lucide-react'
 
 export default function MembershipsCardView({ plans = [], isLoading = false, onEdit, onDelete }) {
 if (isLoading) return (
@@ -61,20 +61,28 @@ if (isLoading) return (
   return (
     <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>
         {plans.map(p => (
-            <Card key={p._id} className='p-4 shadow-none border border-default'>
+            <Card key={p?._id} className='p-4 border border-default-100'>
                 <CardHeader>
                     <div className=' w-full flex flex-col gap-1'>
-                        <h3 className='font-semibold'>{p.name}</h3>
-                        <p className='text-xs text-default-400 dark:text-default-600'>{p.description}</p>
-                        <p className='text-xs text-danger font-bold'>{ p.discountPrice ? `Discount: ${formatCurrency(p.discountPrice, p.currency || 'INR')}` : ''}</p>
+                        <h3 className='font-semibold'>{p?.name}</h3>
+                        <p className='text-xs text-default-400 dark:text-default-600'>{p?.description}</p>
+                        {/* <p className='text-xs text-danger font-bold'>{ p?.discountPrice ? `Discount: ${formatCurrency(p?.discountPrice, p?.currency || 'INR')}` : ''}</p> */}
                     </div>
                     <div className='text-right'>
-                    <p className='font-bold text-success'>{formatCurrency(p.price || 0, p.currency || 'INR')}</p>
+                        {p?.discountPrice ? (
+                            <div className="flex flex-col items-baseline justify-end">
+                                <span className='text-sm text-gray-500 line-through'>{formatCurrency(p?.price || 0, p?.currency || 'INR')}</span>
+                                <span className='text-2xl font-bold text-primary text-end'>{formatCurrency(p?.discountPrice || 0, p?.currency || 'INR')}</span>
+                            </div>
+                        ) : (
+                            <p className='font-bold text-success'>{formatCurrency(p?.price || 0, p?.currency || 'INR')}</p>
+                        )}
+                    {/* <p className='font-bold text-success'>{formatCurrency(p?.price || 0, p?.currency || 'INR')}</p> */}
                     {/* customizable removed */}
                     </div>
                 </CardHeader>
                 <CardBody>
-                    <div className='grid grid-cols-2 gap-2'>
+                    <div className='grid grid-cols-2 gap-2 border-b border-default-200 pb-2'>
                         <div className='flex items-center gap-2'>
                             {/* Manager icon */}
                             <div className="p-1 5 bg-warning/10 rounded-2xl">
@@ -82,7 +90,7 @@ if (isLoading) return (
                             </div>
                             <div>
                                 <p className='text-xs text-default-400 dark:text-default-600'>Managers</p>
-                                <p className='font-medium'>{String(p.limits?.managers || '0')}</p>
+                                <p className='font-medium'>{String(p?.limits?.managers || '0')}</p>
                             </div>
                         </div>
                         
@@ -93,20 +101,33 @@ if (isLoading) return (
                             </div>
                             <div>
                                 <p className='text-xs text-default-400 dark:text-default-600'>Staff</p>
-                                <p className='font-medium'>{String(p.limits?.staff || '0')}</p>
+                                <p className='font-medium'>{String(p?.limits?.staff || '0')}</p>
                             </div>
                         </div>
                     </div>
+                    {/* billing_cycle */}
+                    <div className='mt-2 text-sm'>
+                        <span className='mr-3 capitalize'>Billing Cycle: <strong>{p?.billing_cycle ? p?.billing_cycle.join(', ') : 'monthly, yearly'}</strong></span>
+                    </div>
+                    <div className='mt-2 text-sm border-b border-default-200 pb-2'>
+                        <span className='mr-3'>Validity: <strong>{p?.validityMonths || 0} month</strong></span>
+                        <span className='mr-3'>Trial: <strong>{p?.trialDays || 0} d</strong></span>
+                    </div>
                     <div className='mt-3 text-xs'>
                         <strong>Features:</strong>
-                        {p.features?.map((f, i) => (
-                            <div key={i} className='text-xs'>• {f}</div>
-                        ))}
+                        <div className="mt-4 grid grid-cols-2 gap-3 ml-4">
+                            {p?.features?.map((f, i) => (
+                                <div key={i} className='text-xs flex items-start gap-2'>
+                                    <div className=" bg-success text-white mt-0.5 rounded-full">
+                                        <Check size={15} /> 
+                                    </div>
+                                    {f}
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                    <div className='mt-2 text-xs'>
-                        <span className='mr-3'>Validity: <strong>{p.validityMonths || 0} month</strong></span>
-                        <span className='mr-3'>Trial: <strong>{p.trialDays || 0} d</strong></span>
-                    </div>
+
+                    
                 </CardBody>
                 <CardFooter>
                     <div className='flex gap-2 justify-end'>

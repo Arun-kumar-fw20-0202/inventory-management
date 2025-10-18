@@ -13,12 +13,13 @@ const SelectProductDrawr = ({
     onProductSelect,
     onProductRemove,
 }) => {
-    const [limit, setLimit] = React.useState(20)
+    const [limit, setLimit] = React.useState(50)
     const [search, setSearch] = React.useState('')
 
     const { data: products, isLoading: productsLoading } = useFetchStock({
         search, limit,
         includeAnalytics: false,
+        status: 'active',
         // exportData: true,
         fields: 'productId,productName, sku, quantity, purchasePrice, warehouseId',
     })

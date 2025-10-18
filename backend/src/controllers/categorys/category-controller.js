@@ -1,5 +1,6 @@
 const { CategoryModel } = require("../../models/categorys/category-scheema");
 const { StockModal } = require("../../models/stock/stock-scheema");
+const { error, success } = require("../../utils/response");
 
 
 // Create a new product category
@@ -22,8 +23,6 @@ const createCategoryController = async (req, res) => {
 // Fetch all product categories
 const fetchCategoriesController = async (req, res) => {
    const { search = '', page = 1, limit = 10, active_status = true } = req.query;
-
-   console.log("COming here ...=>")
 
    // Validate req.profile
    if (!req.profile || !req.profile.orgNo) {
@@ -64,8 +63,53 @@ const fetchCategoriesController = async (req, res) => {
    }
 };
 
+const DeleteCategory_controller = async (req, res) => {
+    try{
+        const ids = req.body.ids; // Expecting an array of IDs
+        if(!Array.isArray(ids) || ids.length === 0){
+            return res.status(400).send({message: "No IDs provided", status: false});
+        }
+        const result = await CategoryModel.deleteMany(
+            { _id: { $in: ids }, orgNo: req.profile.orgNo },
+            { $set: { active_status: false } }
+        );
+        if(result.deletedCount === 0){
+            return res.status(404).send({message: "No Categorys found to delete", status: false});
+        }
+        
+        success(res, { message: `Categorys deleted successfully`, status: true });
+    }
+    catch(err){
+      error(res, { message: err.message, status: false });
+    }
+}
+const UpdateCategory_controller = async (req, res) => {
+    try{
+        const { id } = req.body;
+        if(!id){
+            return res.status(400).send({message: "Category ID is required", status: false});
+        }
+        const wherehouse = await CategoryModel.findOneAndUpdate(
+            { _id: id, orgNo: req.profile.orgNo },
+            req.body,
+            { new: true }
+        );
+
+        if(!wherehouse){
+            return res.status(404).send({message: "Category not found", status: false});
+        }
+        success(res, { data: wherehouse, message: "Category updated successfully", status: true });
+    }
+    catch(err){
+        error(res, { message: err.message, status: false });
+    }
+}
+
+
 
 module.exports = {
    createCategoryController,
-   fetchCategoriesController
+   fetchCategoriesController,
+   DeleteCategory_controller,
+   UpdateCategory_controller
 };

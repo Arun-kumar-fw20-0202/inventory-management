@@ -1,13 +1,11 @@
 'use client'
 import React from 'react'
-import SupplierCustomerAutocomplete from '@/components/dynamic/supplier-customer/supplier-customer-autocomplete'
+// import SupplierCustomerAutocomplete from '@/components/dynamic/supplier-customer/supplier-customer-autocomplete'
 import { Input } from '@heroui/input'
 import { Select, SelectItem } from '@heroui/select'
 import { SearchIcon } from '@/components/icons'
 import { Card } from '@heroui/card'
-import { CardSimIcon, Grid3x3, Inbox, Table, Table2 } from 'lucide-react'
-import { Button } from '@heroui/button'
-import { Tooltip } from '@heroui/tooltip'
+import { Inbox } from 'lucide-react'
 
 const statuses = ['all','draft','submitted','approved','rejected','completed']
 
@@ -19,9 +17,8 @@ const SaleFilters = ({ onChange, onChangeMode, mode }) => {
   const [customer, setCustomer] = React.useState(null)
   const [minTotal, setMinTotal] = React.useState('')
   const [maxTotal, setMaxTotal] = React.useState('')
-  const [sortBy, setSortBy] = React.useState('createdAt')
+  const [sortBy, setSortBy] = React.useState('updatedAt')
   const [sortDir, setSortDir] = React.useState('desc')
-  const [limit, setLimit] = React.useState(20)
 
   React.useEffect(() => {
     const payload = {
@@ -29,16 +26,15 @@ const SaleFilters = ({ onChange, onChangeMode, mode }) => {
       status: status === 'all' ? undefined : status,
       fromDate: fromDate || undefined,
       toDate: toDate || undefined,
-      customerId: customer?._id,
+      customerId: customer,
       minTotal: minTotal || undefined,
       maxTotal: maxTotal || undefined,
       sortBy,
       sortDir,
-      limit
     }
     const t = setTimeout(() => onChange && onChange(payload), 400)
     return () => clearTimeout(t)
-  }, [search, status, fromDate, toDate, customer, minTotal, maxTotal, sortBy, sortDir, limit])
+  }, [search, status, fromDate, toDate, customer, minTotal, maxTotal, sortBy, sortDir, ])
 
   return (
     <Card className="flex gap-3 p-6">
@@ -51,43 +47,38 @@ const SaleFilters = ({ onChange, onChangeMode, mode }) => {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        {/* <div className="flex gap-2">
           <Tooltip content="Card View">
             <Button color='primary' variant={mode == 'card' ? 'solid' : 'flat'} isIconOnly size='sm' startContent={<Grid3x3 />} onPress={() => onChangeMode('card')} />
           </Tooltip>
           <Tooltip content="Table View">
             <Button color='primary' variant={mode == 'table' ? 'solid' : 'flat'} isIconOnly size='sm' startContent={<Table2 />} onPress={() => onChangeMode('table')} />
           </Tooltip>
-        </div>
+        </div> */}
       </div>
-      <div className="flex gap-4">
+      <div className="grid lg:grid-cols-4 md:grid-cols-2 grid-cols-1 gap-3 ">
         <Input variant='bordered' value={search} onChange={e => setSearch(e.target.value)} label='search' placeholder="Search by order/customer" startContent={<SearchIcon />} />
         
-        <Select variant='bordered' value={status} onChange={e => setStatus(e.target.value)} label="Status" placeholder="Select Status">
+        <Select variant='bordered' value={status} onChange={e => setStatus(e.target.value)} label="Status" placeholder="Select Status" disabledKeys={new Set([status])}>
           {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
         </Select>
 
-        <Select variant='bordered' value={limit} defaultSelectedKeys={new Set([limit])} onChange={e => setLimit(Number(e.target.value))} label="Limit" placeholder="Select Limit">
-          <SelectItem value={10}>10</SelectItem>
-          <SelectItem value={20}>20</SelectItem>
-          <SelectItem value={50}>50</SelectItem>
+
+        <Select variant='bordered' value={sortBy} onChange={e => setSortBy(e.target.value)} label="Sort" placeholder="Sort By" disabledKeys={new Set([sortBy])}>
+          <SelectItem key='createdAt' value="createdAt">CreatedAt</SelectItem>
+          <SelectItem key='updatedAt' value="updatedAt">UpdatedAt</SelectItem>
+          <SelectItem key='grandTotal' value="grandTotal">Total</SelectItem>
+        </Select>
+        <Select variant='bordered' value={sortDir} onChange={e => setSortDir(e.target.value)} label="Direction" placeholder="Sort Direction" disabledKeys={new Set([sortDir])}>
+          <SelectItem key='desc' value="desc">Desc</SelectItem>
+          <SelectItem key='asc' value="asc">Asc</SelectItem>
         </Select>
 
-        {/* <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="border px-3 py-2 rounded">
-          <option value="createdAt">Date</option>
-          <option value="grandTotal">Total</option>
-        </select>
-        <select value={sortDir} onChange={e => setSortDir(e.target.value)} className="border px-3 py-2 rounded">
-          <option value="desc">Desc</option>
-          <option value="asc">Asc</option>
-        </select> */}
+      <div className="flex gap-2">
+        <Input variant='bordered' type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}  />
+        <Input variant='bordered' type="date" value={toDate} onChange={e => setToDate(e.target.value)}  />
+      </div>
 
-      {/* <div className="flex gap-2">
-        <Input variant='bordered' type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="border px-3 py-2 rounded" />
-        <Input variant='bordered' type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="border px-3 py-2 rounded" />
-      </div> */}
-
-        {/* <div className="w-48"><SupplierCustomerAutocomplete onSelectChange={(c) => setCustomer(c)} /></div> */}
         {/* <Input variant='bordered' value={minTotal} onChange={e => setMinTotal(e.target.value)} placeholder="Min total" />
         <Input variant='bordered' value={maxTotal} onChange={e => setMaxTotal(e.target.value)} placeholder="Max total" /> */}
           

@@ -9,7 +9,7 @@ export function middleware(req) {
   }
 
   // Define public routes
-  const publicRoutes = ["/login", "/signup", "/privacy-policy", "/terms-conditions", "/refund-policy", "/about-us"];
+  const publicRoutes = ["/login", "/signup", "/privacy-policy", "/terms-conditions", "/refund-policy", "/about-us", "/contact-us", "/forgot", "/reset"];
 
     if (process.env.NODE_ENV === "development") {
       console.log("Token in middleware:", token);

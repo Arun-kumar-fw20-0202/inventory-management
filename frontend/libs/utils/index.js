@@ -303,3 +303,82 @@ export const InvoiceNumberGenerator = ({ length = 6, prefix = '' }) => {
   }
   return result
 }
+
+
+
+// format date like just now, 2 minutes ago, today, yesterday, 2 days ago, etc.
+export const formatDateRelative = (date) => {
+  if (!date) return 'N/A'
+  try {
+    const dateObj = new Date(date)
+    const now = new Date()
+    const diffInSeconds = Math.floor((now - dateObj) / 1000)
+    
+    // Less than a minute
+    if (diffInSeconds < 60) return 'Just now'
+    
+    // Minutes ago
+    const diffInMinutes = Math.floor(diffInSeconds / 60)
+    if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`
+    
+    // Hours ago
+    const diffInHours = Math.floor(diffInSeconds / 3600)
+    if (diffInHours < 24) return `${diffInHours} hours ago`
+    
+    // Days
+    const diffInDays = Math.floor(diffInSeconds / 86400)
+    if (diffInDays === 0) return 'Today'
+    if (diffInDays === 1) return 'Yesterday'
+    if (diffInDays < 30) return `${diffInDays} days ago`
+    
+    return formatDate(date)
+  } catch (error) {
+    return 'Invalid Date'
+  }
+}
+
+// get difference between two dates in days
+export const dateDiffInDays = (a, b) => {
+  const _MS_PER_DAY = 1000 * 60 * 60 * 24
+  // Discard the time and time-zone information.
+  const utc1 = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())
+  const utc2 = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate())
+  return Math.floor((utc2 - utc1) / _MS_PER_DAY)
+}
+
+
+// formate into , 1k , 2k , 1M, 2M, etc.
+const SI_SYMBOL = ["", "k", "M", "B", "T", "P", "E"]
+
+export const formatNumberShort = (number) => {
+  // what tier? (determines SI symbol)
+  const tier = Math.log10(Math.abs(number)) / 3 | 0
+  if(tier === 0) return number
+
+  // get suffix and determine scale
+  const suffix = SI_SYMBOL[tier]
+  const scale = Math.pow(10, tier * 3)
+  // scale the number
+  const scaled = number / scale
+  // format number and add suffix
+  return scaled.toFixed(1) + suffix
+}
+
+
+
+// permission modules 
+export const PERMISSION_MODULES = {
+  STOCK: 'stock',
+  SALES: 'sales',
+  PURCHASES: 'purchases',
+  REPORTS: 'reports',
+  ORGANIZATION: 'organization',
+  SYSTEMUSER: 'systemuser',
+  SESSIONS: 'sessions',
+  PRICING: 'pricing',
+  SETTINGS: 'settings',
+  CATEGORY: 'category',
+  WAREHOUSE: 'warehouse',
+  SUPPLIER: 'supplier',
+  CUSTOMER: 'customer',
+}
