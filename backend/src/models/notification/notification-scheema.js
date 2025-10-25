@@ -30,16 +30,16 @@ const translationSchema = new Schema({
 }, { _id: false });
 
 const notificationSchema = new Schema({
-    orgNo: { type: String, index: true }, // tenant id if multi-tenant
+    orgNo: { type: String, }, // tenant id if multi-tenant
 
     title: { type: String, trim: true, required: true, maxlength: 200 },
     message: { type: String, trim: true, required: true, maxlength: 2000 },
 
     // type/category of the notification
-    type: { type: String, required: true, index: true },
+    type: { type: String, required: true, },
 
     // priority/severity
-    priority: { type: String, enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], default: 'MEDIUM', index: true },
+    priority: { type: String, enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], default: 'MEDIUM', },
     severityScore: { type: Number, default: 0 }, // optional numeric score
 
     // channels to attempt delivering through
@@ -79,7 +79,7 @@ const notificationSchema = new Schema({
     metadata: { type: Schema.Types.Mixed },
 
     // grouping and threading support
-    groupId: { type: String, index: true },
+    groupId: { type: String, },
     threadId: { type: String },
 
     // localization
@@ -88,7 +88,7 @@ const notificationSchema = new Schema({
 
     // scheduling & expiry
     scheduledAt: { type: Date },
-    expireAt: { type: Date, index: true },
+    expireAt: { type: Date, },
 
     // lightweight seen/dismiss counters
     seenCount: { type: Number, default: 0 },
@@ -100,11 +100,11 @@ const notificationSchema = new Schema({
 }, { timestamps: true });
 
 // Indexes for fast queries
-notificationSchema.index({ 'recipients.recipient': 1, createdAt: -1 });
-notificationSchema.index({ recipient: 1, createdAt: -1 });
-notificationSchema.index({ type: 1, createdAt: -1 });
-notificationSchema.index({ isBroadcast: 1, createdAt: -1 });
-notificationSchema.index({ expireAt: 1 }, { expireAfterSeconds: 0 }); // TTL index to auto-remove expired notifications
+// notificationSchema.index({ 'recipients.recipient': 1, createdAt: -1 });
+// notificationSchema.index({ recipient: 1, createdAt: -1 });
+// notificationSchema.index({ type: 1, createdAt: -1 });
+// notificationSchema.index({ isBroadcast: 1, createdAt: -1 });
+// notificationSchema.index({ expireAt: 1 }, { expireAfterSeconds: 0 }); // TTL index to auto-remove expired notifications
 
 // Instance helpers
 notificationSchema.methods.markAsRead = async function(userId) {

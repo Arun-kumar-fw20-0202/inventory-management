@@ -66,11 +66,7 @@ app.use(errorHandler);
 // =====================
 // 🔹 MongoDB Connection
 // =====================
-   mongoose.connect(process.env.MONGO_DB_URL, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      maxPoolSize: 20, // Connection pool for scaling
-   })
+   mongoose.connect(process.env.MONGO_DB_URL)
    .then(() => {
       console.log("✅ MongoDB Connected");
       // Start server only after DB connection
