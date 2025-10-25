@@ -110,7 +110,7 @@ const PricingList = () => {
                                         
                                         <div className='mt-4 grid grid-cols-2 gap-4'>
                                             <div className='flex items-center gap-3'>
-                                                <div className="bg-secondary-100 p-2 rounded-lg">
+                                                <div className="bg-secondary/10 p-2 rounded-lg">
                                                     <ShieldUser className='text-secondary' />
                                                 </div>
                                                 <div>
@@ -118,15 +118,36 @@ const PricingList = () => {
                                                     <p className='text-sm font-semibold '>{plan?.limits.managers === 'unlimited' ? 'Unlimited' : plan?.limits.managers}</p>
                                                 </div>
                                             </div>
+                                            
                                             <div className='flex items-center gap-3'>
-                                                <div className="bg-secondary-100 p-2 rounded-lg">
-                                                    <User className='text-secondary' />
+                                                <div className="bg-success/10 p-2 rounded-lg">
+                                                    <User className='text-success' />
                                                 </div>
                                                 <div>
                                                     <p className='text-xs text-gray-500 dark:text-gray-300'>Staff</p>
                                                     <p className='text-sm font-semibold'>{plan?.limits.staff === 'unlimited' ? 'Unlimited' : plan?.limits.staff}</p>
                                                 </div>
                                             </div>
+
+                                            <div className='flex items-center gap-3'>
+                                                <div className="bg-warning/10 p-2 rounded-lg">
+                                                    <User className='text-warning' />
+                                                </div>
+                                                <div>
+                                                    <p className='text-xs text-gray-500 dark:text-gray-300'>Production Head</p>
+                                                    <p className='text-sm font-semibold '>{plan?.limits.production_head === 'unlimited' ? 'Unlimited' : plan?.limits.production_head}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* <div className='flex items-center gap-3'>
+                                                <div className="bg-danger/10 p-2 rounded-lg">
+                                                    <User className='text-danger' />
+                                                </div>
+                                                <div>
+                                                    <p className='text-xs text-gray-500 dark:text-gray-300'>Accountant</p>
+                                                    <p className='text-sm font-semibold '>{plan?.limits.accountant === 'unlimited' ? 'Unlimited' : plan?.limits.accountant}</p>
+                                                </div>
+                                            </div> */}
                                         </div>
                                         
                                         <div className='mt-4'>
@@ -155,9 +176,9 @@ const PricingList = () => {
                                         >
                                             {plan?.isPopular ? 'Get Started' : 'Upgrade Plan'}
                                         </Button>
-                                        <Button color='flat' variant='flat' onPress={() => alert('Contact sales')}>
+                                        {/* <Button color='flat' variant='flat' onPress={() => alert('Contact sales')}>
                                             Contact
-                                        </Button>
+                                        </Button> */}
                                     </div>
                                 </div>
                             </Card>

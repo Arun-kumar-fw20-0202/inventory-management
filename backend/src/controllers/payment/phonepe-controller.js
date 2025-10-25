@@ -262,7 +262,8 @@ const CheckPhonePeStatusController = async (req, res) => {
       //   console.error('extendReferrerDvcExpiry error', e);
       // }
 
-      const successUrl = `${process.env.FRONTEND_URL}/payment/success?transactionId=${encodeURIComponent(paymentRecord.externalPaymentId || '')}&billingCycle=${encodeURIComponent(billing_cycle)}`;
+      // const successUrl = `${process.env.FRONTEND_URL}/payment/success?transactionId=${encodeURIComponent(paymentRecord.externalPaymentId || '')}&billingCycle=${encodeURIComponent(billing_cycle)}`;
+      const successUrl = `${process.env.FRONTEND_URL}/ `
       return res.redirect(successUrl);
     }
 

@@ -13,7 +13,7 @@ export default function MembershipModal({ isOpen, onOpenChange, mode = 'create',
     defaultValues: {
       name: '',
       description: '',
-      limits: { managers: 0, staff: 0 },
+      limits: { managers: 0, staff: 0, production_head: 0, accountant: 0 },
       price: 0,
       discountPrice: 0,
       currency: 'INR',
@@ -104,7 +104,8 @@ export default function MembershipModal({ isOpen, onOpenChange, mode = 'create',
     const payload = {
       name: String(values.name).trim(),
       description: values.description,
-      limits: { managers: m, staff: s },
+      limits: { managers: m, staff: s, production_head: normalizeLimit(values.limits?.production_head),
+        accountant: normalizeLimit(values.limits?.accountant)},
       price: priceNum,
       currency: values.currency || 'INR',
       discountPrice: discountNum,
@@ -150,6 +151,14 @@ export default function MembershipModal({ isOpen, onOpenChange, mode = 'create',
                   )} />
                   <Controller name='limits.staff' control={control} rules={{ required: true }} render={({ field }) => (
                     <Input variant='bordered' {...field} placeholder='Staff limit (number or "unlimited")' label='Staff' size='sm' />
+                  )} />
+
+                  <Controller name='limits.production_head' control={control} rules={{ required: true }} render={({ field }) => (
+                    <Input variant='bordered' {...field} placeholder='Production Head limit (number or "unlimited")' label='Production Heads' size='sm' />
+                  )} />
+
+                  <Controller name='limits.accountant' control={control} rules={{ required: true }} render={({ field }) => (
+                    <Input variant='bordered' {...field} placeholder='Accountant limit (number or "unlimited")' label='Accountants' size='sm' />
                   )} />
                 </div>
 

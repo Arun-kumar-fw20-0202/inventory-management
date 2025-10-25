@@ -36,6 +36,26 @@ const PlanSchema = new mongoose.Schema(
           message: 'Staff limit must be a positive number or "unlimited"',
         },
       },
+      production_head: {
+        type: mongoose.Schema.Types.Mixed, // allows number or "unlimited"
+        required: false,
+        validate: {
+          validator: function (v) {
+            return typeof v === 'number' && v >= 0 || v === 'unlimited';
+          },
+          message: 'Production Head limit must be a positive number or "unlimited"',
+        },
+      },
+      accountant: {
+        type: mongoose.Schema.Types.Mixed, // allows number or "unlimited"
+        required: false,
+        validate: {
+          validator: function (v) {
+            return typeof v === 'number' && v >= 0 || v === 'unlimited';
+          },
+          message: 'Accountant limit must be a positive number or "unlimited"',
+        },
+      },
     },
 
     price: {

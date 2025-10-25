@@ -130,7 +130,7 @@ const createUser = async (req, res) => {
       return sendError(res, 'Missing required fields: name, email, phone, password, role')
 
     const normalizedRole = role.toLowerCase()
-    const validRoles = ['superadmin', 'admin', 'manager', 'staff']
+  const validRoles = ['superadmin', 'admin', 'manager', 'staff', 'production_head', 'accountant']
     if (!validRoles.includes(normalizedRole))
       return sendError(res, 'Invalid role')
 
@@ -138,9 +138,9 @@ const createUser = async (req, res) => {
 
     // ─── Role creation permissions ─────────────────
     const canCreateRole = {
-      superadmin: ['admin', 'manager', 'staff'],
-      admin: ['manager', 'staff'],
-      manager: ['staff'],
+      superadmin: ['admin', 'manager', 'staff', 'production_head', 'accountant'],
+      admin: ['manager', 'staff', 'production_head', 'accountant'],
+      manager: ['staff', 'production_head'],
     }
 
     if (!canCreateRole[creatorRole]?.includes(normalizedRole) && creatorRole !== 'superadmin')
@@ -169,7 +169,7 @@ const createUser = async (req, res) => {
           $setOnInsert: {
             name: `${name.trim()} Organization`,
             orgNo,
-            counts: { users: 0, managers: 0, staff: 0 },
+            counts: { users: 0, managers: 0, staff: 0, production_head: 0, accountant: 0 },
           },
         },
         { new: true, upsert: true }
@@ -195,7 +195,7 @@ const createUser = async (req, res) => {
       );
 
       // Seed default permissions asynchronously (upsert to ensure document exists)
-      ;(async () => {
+      (async () => {
         try {
           // pick template if available, otherwise fall back to staffPermission
           const templateMap = {
@@ -425,14 +425,18 @@ const getUserById = async (req, res) => {
     let additionalData = {};
     
     if(requester?.activerole === 'superadmin'){
-      const [managerCount, staffCount] = await Promise.all([
+      const [managerCount, staffCount, productionHeads, accountants] = await Promise.all([
         UserModal.find({orgNo: user?.orgNo, activerole: 'manager' }).select('-password -updatedAt -__v -referredBy_count'),
         UserModal.find({orgNo: user?.orgNo, activerole: 'staff' }).select('-password -updatedAt -__v -referredBy_count'),
+        UserModal.find({orgNo: user?.orgNo, activerole: 'production_head' }).select('-password -updatedAt -__v -referredBy_count'),
+        UserModal.find({orgNo: user?.orgNo, activerole: 'accountant' }).select('-password -updatedAt -__v -referredBy_count'),
       ]);
       
       additionalData = {
         manager_list: managerCount,
-        staff_list: staffCount
+        staff_list: staffCount,
+        production_head_list: productionHeads,
+        accountant_list: accountants,
       };
     }
 
@@ -616,6 +620,8 @@ const deleteUser = async (req, res) => {
             if (userToDelete.activerole === 'admin') inc['counts.users'] = -1
             else if (userToDelete.activerole === 'manager') inc['counts.managers'] = -1
             else if (userToDelete.activerole === 'staff') inc['counts.staff'] = -1
+            else if (userToDelete.activerole === 'production_head') inc['counts.production_head'] = -1
+            else if (userToDelete.activerole === 'accountant') inc['counts.accountant'] = -1
 
             if (Object.keys(inc).length > 0) {
               await OrganizationModal.findOneAndUpdate(
@@ -643,6 +649,8 @@ const deleteUser = async (req, res) => {
             if (user.activerole === 'admin') inc['counts.users'] = -1
             else if (user.activerole === 'manager') inc['counts.managers'] = -1
             else if (user.activerole === 'staff') inc['counts.staff'] = -1
+            else if (user.activerole === 'production_head') inc['counts.production_head'] = -1
+            else if (user.activerole === 'accountant') inc['counts.accountant'] = -1
 
             if (Object.keys(inc).length > 0) {
               await OrganizationModal.findOneAndUpdate({ orgNo: user.orgNo }, { $inc: inc })

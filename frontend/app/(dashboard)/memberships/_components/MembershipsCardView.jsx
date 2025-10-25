@@ -93,7 +93,7 @@ if (isLoading) return (
                                 <p className='font-medium'>{String(p?.limits?.managers || '0')}</p>
                             </div>
                         </div>
-                        
+
                         <div className='flex items-center gap-2'>
                             {/* Staff icon */}
                             <div className="p-1 5 bg-secondary/10 rounded-2xl">
@@ -104,6 +104,29 @@ if (isLoading) return (
                                 <p className='font-medium'>{String(p?.limits?.staff || '0')}</p>
                             </div>
                         </div>
+
+                        <div className='flex items-center gap-2'>
+                            {/* Manager icon */}
+                            <div className="p-1 5 bg-success/10 rounded-2xl">
+                                <User className='text-success'/>
+                            </div>
+                            <div>
+                                <p className='text-xs text-default-400 dark:text-default-600'>Production Head</p>
+                                <p className='font-medium'>{String(p?.limits?.production_head || '0')}</p>
+                            </div>
+                        </div>
+
+                        <div className='flex items-center gap-2'>
+                            {/* Manager icon */}
+                            <div className="p-1 5 bg-danger/10 rounded-2xl">
+                                <User className='text-danger'/>
+                            </div>
+                            <div>
+                                <p className='text-xs text-default-400 dark:text-default-600'>Accountant</p>
+                                <p className='font-medium'>{String(p?.limits?.accountant || '0')}</p>
+                            </div>
+                        </div>
+                        
                     </div>
                     {/* billing_cycle */}
                     <div className='mt-2 text-sm'>

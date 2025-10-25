@@ -16,7 +16,7 @@ const { success, error: sendError, forbidden } = require('../../utils/response')
 // Helper: validate limits object (managers/staff)
 const validateLimits = (limits) => {
   if (!limits) return false
-  const keys = ['managers', 'staff']
+  const keys = ['managers', 'staff', 'production_head', 'accountant']
   for (const k of keys) {
     const v = limits[k]
     if (v === undefined || v === null) return false

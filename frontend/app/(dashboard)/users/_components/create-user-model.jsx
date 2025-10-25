@@ -21,7 +21,7 @@ export default function CreateUserModal({
         {label: 'Admin', value: 'admin', isVisible: ['superadmin'].includes(activerole)},
         {label: 'Manager', value: 'manager', isVisible: ['admin'].includes(activerole)},
         {label: 'Production Head', value: 'production_head', isVisible: ['admin'].includes(activerole)},
-        {label: 'Accountant', value: 'accountant', isVisible: ['admin'].includes(activerole)},
+        // {label: 'Accountant', value: 'accountant', isVisible: ['admin'].includes(activerole)},
         {label: 'Staff', value: 'staff', isVisible: ['admin', 'manager'].includes(activerole)}
     ]
 
@@ -46,7 +46,7 @@ export default function CreateUserModal({
     const creatableRoles = (() => {
         const r = String(activerole || '').toLowerCase()
         if (r === 'superadmin') return ['admin', 'manager', 'staff']
-        if (r === 'admin') return ['manager', 'staff']
+        if (r === 'admin') return ['manager', 'staff', 'production_head', 'accountant']
         if (r === 'manager') return ['staff']
         return []
     })()
