@@ -15,7 +15,7 @@ import { useSelector } from 'react-redux';
 import { Avatar } from '@heroui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@heroui/popover';
 import { Radio, RadioGroup } from '@heroui/radio';
-import { EllipsisVertical, ReceiptText, Thermometer } from 'lucide-react';
+import { Edit2Icon, EllipsisVertical, ReceiptText, Thermometer } from 'lucide-react';
 import { EyeIcon } from '@/components/icons';
 import Link from 'next/link';
 import { formatDateRelative } from '@/libs/utils';
@@ -137,14 +137,13 @@ export default function SalesTable({ initialFilters = { page: 1, limit: 25 }, ac
         case 'actions':
             return (
             <div className="text-nowrap flex items-center gap-2 justify-center">
-                <Button 
-                    isIconOnly
-                    size='sm'
-                    as={Link}
-                    href={`/sales/${order?._id}`}
-                    startContent={<EyeIcon size={18} />}
-                />
-                <Popover showArrow>
+                {order?.status === 'draft' ? (
+                    <Button isIconOnly size='sm' as={Link} href={`/sales/${order?._id}/edit`} startContent={<Edit2Icon size={16} />} />
+                )
+                    : "--"
+                }
+                <Button isIconOnly size='sm' as={Link} href={`/sales/${order?._id}`} startContent={<EyeIcon size={18} />} />
+                {/* <Popover showArrow>
                     <PopoverTrigger>
                         <Button isIconOnly size='sm' startContent={<EllipsisVertical size={18} />} />
                     </PopoverTrigger>
@@ -179,7 +178,7 @@ export default function SalesTable({ initialFilters = { page: 1, limit: 25 }, ac
                             </RadioGroup>
                         </div>
                     </PopoverContent>
-                </Popover>
+                </Popover> */}
             </div>
             )
         default:

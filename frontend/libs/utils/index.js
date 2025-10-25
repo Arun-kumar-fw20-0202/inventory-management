@@ -382,3 +382,11 @@ export const PERMISSION_MODULES = {
   SUPPLIER: 'supplier',
   CUSTOMER: 'customer',
 }
+
+
+
+export const PERMISSION_DEPENDENCIES = {
+  'create_sale': ['read_customer', 'read_stock', 'read_product'],
+  'create_purchase': ['read_supplier', 'read_product'],
+  'delete_stock': ['read_stock'],
+}

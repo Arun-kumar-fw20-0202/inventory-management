@@ -20,6 +20,8 @@ export default function CreateUserModal({
     const ROLE_OPTIONS = [
         {label: 'Admin', value: 'admin', isVisible: ['superadmin'].includes(activerole)},
         {label: 'Manager', value: 'manager', isVisible: ['admin'].includes(activerole)},
+        {label: 'Production Head', value: 'production_head', isVisible: ['admin'].includes(activerole)},
+        {label: 'Accountant', value: 'accountant', isVisible: ['admin'].includes(activerole)},
         {label: 'Staff', value: 'staff', isVisible: ['admin', 'manager'].includes(activerole)}
     ]
 

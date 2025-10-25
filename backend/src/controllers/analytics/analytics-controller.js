@@ -11,9 +11,9 @@ function buildMatch(req) {
     const match = {}
     if (orgNo) match.orgNo = orgNo
 
-    if(req.profile.activerole !== 'admin'){
+    // if(req.profile.activerole !== 'admin'){
         match.createdAt = { $gte: new Date(new Date().setHours(0,0,0,0)), $lte: new Date(new Date().setHours(23,59,59,999)) }
-    }
+    // }
 
     // allow admin to filter by userId (explicit query param)
     if (req.profile && req.profile.activerole === 'admin' && req.query.userId) {
@@ -26,14 +26,14 @@ function buildMatch(req) {
     }
 
     // if the requester is a staff, scope results to their own createdBy
-    if (req.profile && req.profile.activerole === 'staff' && req.profile._id) {
-        try {
-            match.createdBy = new mongoose.Types.ObjectId(req.profile._id)
-        } catch (e) {
-            // defensive: if profile._id is not a valid ObjectId, skip scoping
-            console.warn('Invalid profile._id when scoping analytics to staff:', req.profile._id)
-        }
-    }
+    // if (req.profile && req.profile.activerole !== 'admin' && req.profile._id) {
+    //     try {
+    //         match.createdBy = new mongoose.Types.ObjectId(req.profile._id)
+    //     } catch (e) {
+    //         // defensive: if profile._id is not a valid ObjectId, skip scoping
+    //         console.warn('Invalid profile._id when scoping analytics to staff:', req.profile._id)
+    //     }
+    // }
 
     const { startDate, endDate, status, customerId, warehouseId } = req.query || {}
     if (startDate || endDate) {
@@ -248,7 +248,12 @@ const InventoryTurnoverController = async (req, res) => {
         const orgNo = req.profile?.orgNo 
 
         // COGS: unwind sale items and multiply quantity * purchasePrice (lookup)
-        const saleMatch = { orgNo }
+        const saleMatch = { 
+            orgNo,
+        }
+        // if(req.profile.activerole !== 'admin'){
+        //     saleMatch.createdBy = req.profile?._id;
+        // }
         if (startDate || endDate) {
             saleMatch.createdAt = {}
             if (startDate) saleMatch.createdAt.$gte = new Date(startDate)
@@ -264,8 +269,13 @@ const InventoryTurnoverController = async (req, res) => {
             { $group: { _id: null, totalCOGS: { $sum: '$cogs' } } }
         ]
 
+
+        const stockMatch = { orgNo }
+        // if(req.profile.activerole !== 'admin'){
+        //     stockMatch.createdBy = req.profile?._id;
+        // }
         const invPipeline = [
-            { $match: { orgNo } },
+            { $match: stockMatch },
             { $project: { value: { $multiply: ['$quantity', { $ifNull: ['$purchasePrice', 0] }] } } },
             { $group: { _id: null, totalInventoryValue: { $sum: '$value' }, avgInventoryValue: { $avg: '$value' } } }
         ]

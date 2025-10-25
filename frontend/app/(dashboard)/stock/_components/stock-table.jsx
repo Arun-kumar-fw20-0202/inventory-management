@@ -1,19 +1,18 @@
 'use client'
 import { TableStyleFormate } from '@/components/formate'
-import { useFetchStock } from '@/libs/query/stock/stock-query'
 import { Button } from '@heroui/button'
-import { Card } from '@heroui/card'
 import { Spinner } from '@heroui/spinner'
 import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/table'
 import { Chip } from '@heroui/chip'
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/dropdown'
-import { RefreshCcw, MoreVertical, Edit, Eye, Trash2, Plus, SheetIcon } from 'lucide-react'
+import { RefreshCcw, MoreVertical, Edit, Eye, Trash2, Plus, SheetIcon, Paperclip } from 'lucide-react'
 import React from 'react'
 import { formatDateRelative } from '@/libs/utils'
 import BulkUploadModal from '@/components/BulkUploadModal'
 import BulkUploadResultsModal from '../../categories/_components/bulk-upload-results-modal'
 import { useDisclosure } from '@heroui/modal'
 import { Avatar } from '@heroui/avatar'
+import { useRouter } from 'next/navigation'
 
 // Column definitions
 const columns = [
@@ -24,6 +23,7 @@ const columns = [
    { name: "QUANTITY", uid: "quantity", sortable: true },
    // { name: "UNIT", uid: "unit", sortable: false },
    { name: "PRICE", uid: "sellingPrice", sortable: true },
+   { name: 'ATTACHMENTS', uid: 'attachmentsCount', sortable: false },
    { name: "TOTAL VALUE", uid: "totalValue", sortable: false },
    { name: "STATUS", uid: "stockStatus", sortable: false },
    { name: "CREATEDAT", uid: "createdAt", sortable: false },
@@ -44,6 +44,7 @@ const StockTable = ({
    bottomContent,
 }) => {
 
+   const router = useRouter();
    const renderCell = React.useCallback((item, columnKey) => {
       const cellValue = item[columnKey];
 
@@ -53,6 +54,19 @@ const StockTable = ({
                <div className="flex flex-col text-nowrap">
                   <p className="text-bold text-sm capitalize">{item.productName}</p>
                   <p className="text-bold text-xs capitalize text-gray-600 dark:text-gray-300 ">{item.description.substring(0, 30) || "No description"} {item?.description.length > 30 ? "..." : ""}</p>
+               </div>
+            );
+         case "attachmentsCount":
+            return (
+               item.attachmentsCount || item.attachmentsCount ? (
+                  <div className="flex flex-col text-nowrap">
+                     <p className="text-bold text-sm">{item.attachmentsCount || "--"} Attachments</p>
+                     <p className="text-bold text-xs text-gray-600 dark:text-gray-300 ">Total quantity: {item.totalAttachmentCount || 0}</p>
+                  </div>
+               )
+            :
+               <div className="flex flex-col text-nowrap text-center">
+                  <p className="text-bold text-sm">----</p>
                </div>
             );
          case "sku":
@@ -145,6 +159,9 @@ const StockTable = ({
                         </Button>
                      </DropdownTrigger>
                      <DropdownMenu>
+                        <DropdownItem key="add-attachments" startContent={<Paperclip size={16} />} onPress={() => router.push(`/stock/product-attachments/${item._id}`) }>
+                           Add Attachments
+                        </DropdownItem>
                         <DropdownItem key="view" startContent={<Eye size={16} />} onPress={() => onViewDetails?.(item)}>
                            View Details
                         </DropdownItem>

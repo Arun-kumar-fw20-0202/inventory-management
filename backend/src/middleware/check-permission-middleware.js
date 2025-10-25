@@ -36,6 +36,15 @@ const ACTION_MAPPING = {
   delete: 'DELETE'
 }
 
+// Map UI-style actions (can-approve, can-receive) to schema keys (approve, receive)
+const ACTION_ALIASES = {
+  'can-approve': 'approve',
+  'can-reject': 'reject',
+  'can-complete': 'complete',
+  'can-receive': 'receive',
+  'receive': 'receive'
+}
+
 function normalizePermissions(input) {
   if (!input) return null
   // input may be a permission document with `.permissions`
@@ -61,7 +70,9 @@ function  hasPermission (permissionsInput, moduleKey, action){
   const mod = findModule(perms, moduleKey)
   if (!mod) return false
 
-  const act = String(action).toLowerCase()
+  let act = String(action).toLowerCase()
+  // normalize UI verbs like `can-approve` -> `approve`
+  if (ACTION_ALIASES[act]) act = ACTION_ALIASES[act]
 
   // If module entry uses boolean flags like { create: true }
   if (typeof mod === 'object') {

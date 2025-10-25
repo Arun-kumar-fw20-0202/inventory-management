@@ -129,7 +129,7 @@ export default function PurchaseOrdersTableView({ orders = [], isLoading = false
               </Button>
             ) : null}
 
-            <Dropdown>
+            {/* <Dropdown>
               <DropdownTrigger>
                 <Button variant='light' size='sm' isIconOnly><EllipsisVertical /></Button>
               </DropdownTrigger>
@@ -145,7 +145,7 @@ export default function PurchaseOrdersTableView({ orders = [], isLoading = false
                   </DropdownItem>
                 ))}
               </DropdownMenu>
-            </Dropdown>
+            </Dropdown> */}
           </div>
         )
       }

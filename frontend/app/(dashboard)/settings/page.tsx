@@ -4,10 +4,12 @@ import PageAccess from '@/components/role-page-access'
 import { Card, CardBody, CardHeader } from '@heroui/card'
 import { Button } from '@heroui/button'
 import { Settings, Save, User, Bell, Shield, Database } from 'lucide-react'
+import CheckPagePermission from '@/components/check-page-permissoin'
+import { PERMISSION_MODULES } from '@/libs/utils'
 
 const SettingsPage = () => {
   return (
-    <PageAccess allowedRoles={['superadmin', 'admin', 'manager']}>
+    <CheckPagePermission allowPermission={{ module: PERMISSION_MODULES.SETTINGS, action: 'read' }}>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -96,7 +98,7 @@ const SettingsPage = () => {
           </CardBody>
         </Card>
       </div>
-    </PageAccess>
+    </CheckPagePermission>
   )
 }
 

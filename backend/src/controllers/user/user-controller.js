@@ -34,7 +34,13 @@ const canCreateMore = async (orgNo, role) => {
           $setOnInsert: {
             name: `Org ${newOrgNo}`,
             orgNo: newOrgNo,
-            counts: { users: 0, managers: 0, staff: 0 },
+            counts: { 
+              users: 0, 
+              managers: 0, 
+              staff: 0,
+              production_head: 0,
+              accountant: 0,
+            },
           },
         },
         { new: true, upsert: true }
@@ -43,7 +49,7 @@ const canCreateMore = async (orgNo, role) => {
 
     if (!org) return { allowed: false, message: 'Organization not found' }
 
-    const counts = org.counts || { users: 0, managers: 0, staff: 0 }
+    const counts = org.counts || { users: 0, managers: 0, staff: 0, production_head: 0, accountant: 0 }
     const limits = org?.payment?.details?.limits || {}
 
     // Treat undefined limits as Infinity (unlimited)
@@ -51,6 +57,8 @@ const canCreateMore = async (orgNo, role) => {
       users: Number.isFinite(limits.users) ? limits.users : Infinity,
       managers: Number.isFinite(limits.managers) ? limits.managers : Infinity,
       staff: Number.isFinite(limits.staff) ? limits.staff : Infinity,
+      production_head: Number.isFinite(limits.production_head) ? limits.production_head : Infinity,
+      accountant: Number.isFinite(limits.accountant) ? limits.accountant : Infinity,
     }
 
     // Validation logic per role
@@ -62,8 +70,7 @@ const canCreateMore = async (orgNo, role) => {
         },
 
       manager: () =>
-        (counts.managers < planLimits.managers &&
-          counts.users < planLimits.users) || {
+        (counts.managers < planLimits.managers && counts.users < planLimits.users) || {
           allowed: false,
           message:
             counts.managers >= planLimits.managers
@@ -72,12 +79,29 @@ const canCreateMore = async (orgNo, role) => {
         },
 
       staff: () =>
-        (counts.staff < planLimits.staff &&
-          counts.users < planLimits.users) || {
+        (counts.staff < planLimits.staff && counts.users < planLimits.users) || {
           allowed: false,
           message:
             counts.staff >= planLimits.staff
               ? `Staff limit reached. Max ${planLimits.staff} allowed.`
+              : `User limit reached. Max ${planLimits.users} allowed.`,
+        },
+
+      production_head: () =>
+        (counts.production_head < planLimits.production_head && counts.users < planLimits.users) || {
+          allowed: false,
+          message:
+            counts.production_head >= planLimits.production_head
+              ? `Production head limit reached. Max ${planLimits.production_head} allowed.`
+              : `User limit reached. Max ${planLimits.users} allowed.`,
+        },
+
+      accountant: () =>
+        (counts.accountant < planLimits.accountant && counts.users < planLimits.users) || {
+          allowed: false,
+          message:
+            counts.accountant >= planLimits.accountant
+              ? `Accountant limit reached. Max ${planLimits.accountant} allowed.`
               : `User limit reached. Max ${planLimits.users} allowed.`,
         },
     }
@@ -164,7 +188,7 @@ const createUser = async (req, res) => {
         createdBy: creator?._id || null,
       })
 
-      // Link org to user
+      // Link org to user and initialize counts for new role fields
       await OrganizationModal.findOneAndUpdate(
         { orgNo },
         { $set: { userId: user._id }, $inc: { 'counts.users': 1 } }
@@ -173,12 +197,15 @@ const createUser = async (req, res) => {
       // Seed default permissions asynchronously (upsert to ensure document exists)
       ;(async () => {
         try {
-          const template =
-            normalizedRole === 'admin'
-              ? adminPermission
-              : normalizedRole === 'manager'
-              ? managerPermission
-              : staffPermission
+          // pick template if available, otherwise fall back to staffPermission
+          const templateMap = {
+            admin: adminPermission,
+            manager: managerPermission,
+            staff: staffPermission,
+            production_head: staffPermission,
+            accountant: staffPermission,
+          }
+          const template = templateMap[normalizedRole] || staffPermission
 
           await Permission.findOneAndUpdate(
             { userId: user._id },
@@ -228,16 +255,21 @@ const createUser = async (req, res) => {
       // Seed default permissions asynchronously (upsert so updates on re-run are safe)
       ;(async () => {
         try {
-          const template =
-            user?.activerole === 'admin'
-              ? adminPermission
-              : user?.activerole === 'manager'
-              ? managerPermission
-              : staffPermission
-            
-            console.log(template)
+          // seed default permission template for new user (fall back to staffPermission)
+          const templateMap = {
+            admin: adminPermission,
+            manager: managerPermission,
+            staff: staffPermission,
+            production_head: staffPermission,
+            accountant: staffPermission,
+          }
+          const tpl = templateMap[user?.activerole] || staffPermission
 
-          await Permission.create({permissions: template, userId: user?._id, orgNo: user?.orgNo, createdBy: req?.profile?._id})
+          try {
+            await Permission.create({ permissions: tpl, userId: user?._id, orgNo: user?.orgNo, createdBy: req?.profile?._id })
+          } catch (permErr) {
+            console.error('Failed to seed default permissions (non-admin path):', permErr)
+          }
         } catch (err) {
           console.error('Failed to seed default permissions (non-admin path):', err)
         }
@@ -248,6 +280,8 @@ const createUser = async (req, res) => {
         admin: { 'counts.users': 1 },
         manager: { 'counts.managers': 1 },
         staff: { 'counts.staff': 1 },
+        production_head: { 'counts.production_head': 1 },
+        accountant: { 'counts.accountant': 1 },
       }
 
       if (user.orgNo && incMap[normalizedRole]) {
@@ -467,7 +501,7 @@ const updateUser = async (req, res) => {
     }
 
     // Determine whether we need to update organisation counts
-    const roleFieldMap = { admin: 'counts.users', manager: 'counts.managers', staff: 'counts.staff' }
+  const roleFieldMap = { admin: 'counts.users', manager: 'counts.managers', staff: 'counts.staff', production_head: 'counts.production_head', accountant: 'counts.accountant' }
 
     const oldRole = existingUser.activerole
     const newRole = update.activerole || oldRole

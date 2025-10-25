@@ -7,6 +7,8 @@ import { User, Plus,  } from 'lucide-react'
 import SupplierCustomerModal from '@/components/supplier-customer-modal'
 import SupplierCustomerTable from '@/components/supplier-customer-table'
 import CustomerSupplierSummery from '@/components/customer-supplier-summery'
+import CheckPagePermission from '@/components/check-page-permissoin'
+import { PERMISSION_MODULES } from '@/libs/utils'
 
 const SuppliersPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -37,7 +39,7 @@ const SuppliersPage = () => {
 
 
   return (
-    <PageAccess allowedRoles={['superadmin', 'admin', 'manager']}>
+    <CheckPagePermission allowPermission={{ module: PERMISSION_MODULES.SUPPLIER, action: 'read' }}>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -82,7 +84,7 @@ const SuppliersPage = () => {
           defaultType="supplier"
         />
       </div>
-    </PageAccess>
+    </CheckPagePermission>
   )
 }
 

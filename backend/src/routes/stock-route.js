@@ -12,8 +12,14 @@ const {
 const checkPermissions = require("../middleware/check-permission-middleware");
 const { RoleVerifyMiddleware } = require("../middleware/role-verify-middleware");
 const { PERMISSION_MODULES } = require("../utils/permission-modules");
+const { StockAttachmentsRoutes } = require("./stock-attachments-route");
 
 const StockRoutes = require("express").Router();
+
+
+// Attachment routes
+StockRoutes.use('/', StockAttachmentsRoutes);
+
 
 // Create stock
 StockRoutes.post("/create", RoleVerifyMiddleware("all"), checkPermissions(PERMISSION_MODULES.STOCK, 'create'), createStockController);
@@ -41,6 +47,8 @@ StockRoutes.get('/:id', RoleVerifyMiddleware("all"), checkPermissions(PERMISSION
 
 // Get all stock (most general route last)
 StockRoutes.get('/', RoleVerifyMiddleware("all"), checkPermissions(PERMISSION_MODULES.STOCK, 'read'), getAllStockController);
+
+
 
 module.exports = {
    StockRoutes

@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@heroui/popover'
 import WarehouseAutocomplete from '@/components/dynamic/warehouse/warehouse-autocomplete-'
 import { Checkbox } from "@heroui/checkbox"
 import { Select, SelectItem } from '@heroui/select'
+import { useSearchParams } from 'next/navigation'
 
 /**
  * StockTableFilters
@@ -23,6 +24,8 @@ import { Select, SelectItem } from '@heroui/select'
  * - Other controls update filter immediately
  */
 const StockTableFilters = ({ filter = {}, setFilter, categories = [], units = [], className = '' }) => {
+    const searchParams = useSearchParams()
+    
     const defaultState = useMemo(() => ({
         search: '',
         category: '',
@@ -123,6 +126,8 @@ const StockTableFilters = ({ filter = {}, setFilter, categories = [], units = []
             minPrice: null,
             maxPrice: null
         }
+        // clear URL search params
+        
         setLocal(resetState)
         if (setFilter) {
             setFilter(prev => ({ ...prev, ...resetState, page: 1 }))

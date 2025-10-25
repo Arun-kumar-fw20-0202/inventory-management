@@ -12,13 +12,38 @@ import toast from 'react-hot-toast'
 import { Radio, RadioGroup } from '@heroui/radio'
 import {Alert} from "@heroui/alert";
 import ConfirmActionModal from '@/app/(dashboard)/sales/all/_components/ConfirmActionModal'
-import { formatDateRelative } from '@/libs/utils'
+import { formatDateRelative, PERMISSION_MODULES } from '@/libs/utils'
 import { Chip } from '@heroui/chip'
+import CheckPagePermission from '@/components/check-page-permissoin'
+import { useHasPermission } from '@/libs/utils/check-permission'
 
 const Index = (saleId) => {
   const id = saleId?.params?.saleId
+  const readPermission = useHasPermission(PERMISSION_MODULES.SALES, 'read')
+  if (!readPermission) {
+    return (
+      <div className='flex justify-center items-center h-screen'>
+        <div className='max-w-md mx-auto text-center p-8 rounded-2xl shadow-lg'>
+          <div className='w-16 h-16 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center'>
+              <svg className='w-8 h-8 text-red-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 15v2m0 0v2m0-2h2m-2 0H10m2-5V9m0 0V7m0 2h2m-2 0H10' />
+              </svg>
+          </div>
+          <h1 className='text-2xl font-bold mb-3'>Access Denied</h1>
+          <p className='text-gray-600 dark:text-gray-300 mb-6'>You don't have permission to view this page. Please contact your administrator if you believe this is an error.</p>
+          <button
+              onClick={() => window.history.back()}
+              className='px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200'
+          >
+              Go Back
+          </button>
+        </div>
+    </div>
+    )
+  }
   const { data: saleData, isLoading, error, refetch } = useFetchSaleById(id)
   const {isOpen, onOpen, onOpenChange} = useDisclosure()
+
 
   if (isLoading) {
     return <LoadingState />
@@ -33,7 +58,7 @@ const Index = (saleId) => {
   const sale = saleData.data
 
   return (
-    <PageAccess allowedRoles={['superadmin', 'admin', 'manager', 'staff']}>
+    <CheckPagePermission allowPermission={{ module: PERMISSION_MODULES.SALES, action: 'read' }}>
       <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
         <div className=" mx-auto space-y-6">
           <InvoiceModal 
@@ -67,7 +92,7 @@ const Index = (saleId) => {
           <Timeline sale={sale} />
         </div>
       </div>
-    </PageAccess>
+    </CheckPagePermission>
   )
 }
 
@@ -177,6 +202,10 @@ const Header = ({ sale, onOpenChange, refetch }) => {
   const { mutateAsync: completeAsync, isPending: completing } = useCompleteSale()
 
   const canApproveOrReject = useMemo(() => user?.data?.activerole !== 'staff', [user])
+  // permission checks (hooks must be called at top level)
+  const canApprovePerm = useHasPermission(PERMISSION_MODULES.SALES, 'approve')
+  const canRejectPerm = useHasPermission(PERMISSION_MODULES.SALES, 'reject')
+  const canCompletePerm = useHasPermission(PERMISSION_MODULES.SALES, 'complete')
 
   const handleSubmit = useCallback(async () => {
     if (submetting) return
@@ -240,7 +269,7 @@ const Header = ({ sale, onOpenChange, refetch }) => {
       }
       refetch?.()
     } catch (err) {
-      toast.error(err?.message || 'Action failed')
+      // toast.error(err?.message || 'Action failed')
     } finally {
       setConfirmOpen(false)
       setConfirmPayload(null)
@@ -265,12 +294,16 @@ const Header = ({ sale, onOpenChange, refetch }) => {
 
           {sale.status === 'submitted' && canApproveOrReject && (
             <>
-              <Button size="sm" color="primary" onPress={handleApprove} disabled={approving}>{approving ? 'Approving...' : 'Approve'}</Button>
-              <Button size="sm" color="danger" variant="solid" onPress={handleReject} disabled={rejecting}>{rejecting ? 'Rejecting...' : 'Reject'}</Button>
+              {canApprovePerm && (
+                <Button size="sm" color="primary" onPress={handleApprove} disabled={approving}>{approving ? 'Approving...' : 'Approve'}</Button>
+              )}
+              {canRejectPerm && (
+                <Button size="sm" color="danger" variant="solid" onPress={handleReject} disabled={rejecting}>{rejecting ? 'Rejecting...' : 'Reject'}</Button>
+              )}
             </>
           )}
 
-          {sale.status === 'approved' && canApproveOrReject && (
+          {sale.status === 'approved' && canApproveOrReject && canCompletePerm && (
             <Button size="sm" color="success" onPress={handleComplete} disabled={completing}>{completing ? 'Completing...' : 'Complete'}</Button>
           )}
 

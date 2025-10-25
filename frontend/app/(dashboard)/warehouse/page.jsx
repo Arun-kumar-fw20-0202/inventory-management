@@ -2,10 +2,12 @@ import PageAccess from '@/components/role-page-access'
 import { Warehouse } from 'lucide-react'
 import React from 'react'
 import WarehouseTable from './_components/warehouse-table'
+import CheckPagePermission from '@/components/check-page-permissoin'
+import { PERMISSION_MODULES } from '@/libs/utils'
 
 const Index = () => {
    return (
-      <PageAccess allowedRoles={['superadmin', 'admin', 'manager']}>
+      <CheckPagePermission allowPermission={{ module: PERMISSION_MODULES.WAREHOUSE, action: 'read' }}>
          <div className="p-6">
             <div className="flex items-center gap-3 mb-6">
                <Warehouse className="w-8 h-8 text-primary" />
@@ -16,7 +18,7 @@ const Index = () => {
             </div>
             <WarehouseTable />
          </div>
-      </PageAccess>
+      </CheckPagePermission>
    )
 }
 

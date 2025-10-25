@@ -20,9 +20,30 @@ export const useCreateSale = () => {
       toast.success(data?.message || 'Sale created')
     },
     onError: (err) => {
-      const msg = err?.response?.data?.message || 'Error creating sale'
+      const msg = err?.response?.data?.error || 'Error creating sale'
       toast.error(msg)
       console.error('Create sale error', err)
+    }
+  })
+}
+
+export const useUpdateSale = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, data }) => {
+      const res = await api.patch(`/sales/${id}/update`, data)
+      return res.data
+    },
+    onSuccess: (data, vars) => {
+      qc.invalidateQueries({ queryKey: ['sales'] })
+      qc.invalidateQueries({ queryKey: ['sale', vars.id] })
+      qc.invalidateQueries({ queryKey: ['sales-analytics'] })
+      toast.success(data?.message || 'Sale updated')
+    },
+    onError: (err) => {
+      const msg = err?.response?.data?.error || 'Error updating sale' 
+      toast.error(msg)
+      console.error('Update sale error', err)
     }
   })
 }
@@ -63,7 +84,7 @@ export const useApproveSale = () => {
       toast.success(data?.message || 'Sale approved')
     },
     onError: (err) => {
-      const msg = err?.response?.data?.message || 'Error approving sale'
+      const msg = err?.response?.data?.error || err?.response?.data?.message || 'Error approving sale'
       toast.error(msg)
       console.error('Approve sale error', err)
     }
@@ -86,7 +107,7 @@ export const useUpdatePaymentStatus = () => {
       toast.success(data?.message || 'Payment status updated')
     },
     onError: (err) => {
-      const msg = err?.response?.data?.message || 'Error updating payment status'
+      const msg = err?.response?.data?.error || err?.response?.data?.message || 'Error updating payment status'
       toast.error(msg)
       console.error('Approve sale error', err)
     }
@@ -107,7 +128,7 @@ export const useRejectSale = () => {
       toast.success(data?.message || 'Sale rejected')
     },
     onError: (err) => {
-      const msg = err?.response?.data?.message || 'Error rejecting sale'
+      const msg = err?.response?.data?.error || err?.response?.data?.message || 'Error rejecting sale'
       toast.error(msg)
       console.error('Reject sale error', err)
     }
@@ -128,7 +149,7 @@ export const useCompleteSale = () => {
       toast.success(data?.message || 'Sale completed')
     },
     onError: (err) => {
-      const msg = err?.response?.data?.message || 'Error completing sale'
+      const msg = err?.response?.data?.error || err?.response?.data?.message || 'Error completing sale'
       toast.error(msg)
       console.error('Complete sale error', err)
     }
@@ -149,7 +170,7 @@ export const useDeleteSale = () => {
       toast.success(data?.message || 'Sale deleted')
     },
     onError: (err) => {
-      const msg = err?.response?.data?.message || 'Error deleting sale'
+      const msg = err?.response?.data?.error || err?.response?.data?.message || 'Error deleting sale'
       toast.error(msg)
       console.error('Delete sale error', err)
     }
@@ -205,6 +226,7 @@ export default {
   useCreateSale,
   useSubmitSale,
   useApproveSale,
+  useUpdateSale,
   useRejectSale,
   useCompleteSale,
   useDeleteSale,

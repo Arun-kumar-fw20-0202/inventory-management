@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken'); // Using JWT for authentication
 const crypto = require('crypto');
 const { UserModal } = require('../models/User');
 const { SessionModel } = require('../models/session/SessionSchema');
+const { Permission } = require('../models/permission/permission-scheema');
 
 // helper to hash token
 const hashToken = (t) => crypto.createHash('sha256').update(t).digest('hex');
@@ -58,12 +59,17 @@ const RoleVerifyMiddleware = (...allowedRoles) => {
         return res.clearCookie('inventory_management_token').status(403).json({ status: false, message: 'Your account is blocked. Please contact support.' });
       }
 
+      // find permissions 
+      // const permission = await Permission.findOne({ userId: user._id }).lean();
+      // console.log('User Permissions:', permission?.permissions);
+
       // Handle allowed roles
       if (allowedRoles.includes('all') || allowedRoles.includes(user.activerole)) {
         // Update lastUsedAt non-blocking
         SessionModel.updateOne({ _id: session._id }, { $set: { lastUsedAt: new Date() } }).catch(()=>{});
         req.profile = user;
         req.session = session;
+        // if (permission) req.permissions = permission?.permissions || {};
         return next();
       }
 

@@ -44,6 +44,26 @@ const StockSchema = new mongoose.Schema(
       index: true // for category filtering
     },
 
+    attachmentsId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "stock_attachments",
+    },
+
+    attachmentsCount: {
+      type: Number,
+      validate: {
+        validator: Number.isInteger,
+        message: 'attachmentsCount must be an integer'
+      }
+    },
+    totalAttachmentCount: {
+      type: Number,
+      validate: {
+        validator: Number.isInteger,
+        message: 'totalAttachmentCount must be an integer'
+      }
+    },
+
     warehouse: { 
       type: mongoose.Schema.Types.ObjectId, 
       ref: "Warehouse",

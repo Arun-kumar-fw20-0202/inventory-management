@@ -1,5 +1,5 @@
 'use client'
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import PageAccess from '@/components/role-page-access'
 import { Card } from '@heroui/card'
 import { BookOpen } from 'lucide-react'
@@ -11,17 +11,23 @@ import { useFetchStock } from '@/libs/query/stock/stock-query'
 import { useRouter } from 'next/navigation'
 import { StockSummary } from './_components/stock-summary'
 import StockTableFilters from './_components/stock-table-filters'
-import { Button } from '@heroui/button'
 import { Pagination } from '@heroui/pagination'
+import CheckPagePermission from '@/components/check-page-permissoin'
+import { PERMISSION_MODULES } from '@/libs/utils'
 
 
-const StockPage = () => {
+const Index = (params) => {
    const router = useRouter()
+   const status = params?.searchParams?.prostatus;
+   const page = params?.searchParams?.page;
+   const lowStock = params?.searchParams?.lowStock;
+   // console.log(lowStock)
+   // console.log(page)
    const [bulkSelection, setBulkSelection] = React.useState([]);
    
    const [filter, setFilter] = React.useState({
       page: 1,
-      limit: 10,
+      limit: 25,
       sortBy: 'createdAt',
       sortOrder: 'desc',
       search: '',
@@ -33,6 +39,17 @@ const StockPage = () => {
       lowStock: false,
       includeAnalytics: true,
    })
+
+   useEffect(() => {
+      if (status || page || lowStock){
+         setFilter(prev => ({
+            ...prev,
+            status: status || null,
+            page: page ? parseInt(page) : 1,
+            lowStock: lowStock === 'true' ? true : false,
+         }))
+      }
+   }, [status, page])
 
    const { data: stocks, isLoading: isLoading, refetch: handleRefresh } = useFetchStock({
       ...filter
@@ -111,7 +128,7 @@ const StockPage = () => {
          <>
             {paginationData && (
                <div className="flex items-center justify-between overflow-hidden">
-                  <Pagination color="primary" page={paginationData.currentPage} total={10} onChange={(page) => setFilter({...filter, page: page})} isCompact showControls />
+                  <Pagination color="primary" page={paginationData.currentPage} total={paginationData?.totalPages} onChange={(page) => setFilter({...filter, page: page})} isCompact showControls />
                   <select onChange={(e) => setFilter({...filter, limit: e.target.value})} value={filter?.limit} className='max-w-xs p-1 px-3 border border-default-100'>
                      {[10, 20, 50, 100].map(l => (
                         <option className='dark:text-black' key={l} value={l}>{l}</option>
@@ -125,7 +142,7 @@ const StockPage = () => {
    
    
    return (
-      <PageAccess allowedRoles={['superadmin', 'admin', 'manager', 'staff']}>
+      <CheckPagePermission allowPermission={{ module: PERMISSION_MODULES.STOCK, action: 'read' }}>
          <StockModal
             isOpen={isOpen}
             onClose={handleCloseModal}
@@ -133,9 +150,6 @@ const StockPage = () => {
             stockData={selectedStock}
             onSubmit={handleStockSubmit}
          />
-
-
-         
          
          <div className="p-6 flex flex-col gap-3">
             <div className="flex items-center gap-3 mb-6">
@@ -174,8 +188,8 @@ const StockPage = () => {
                </div>
             )}
          </div>
-      </PageAccess>
+      </CheckPagePermission>
    )
 }
 
-export default StockPage
+export default Index

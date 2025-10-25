@@ -1,11 +1,12 @@
-import PageAccess from '@/components/role-page-access'
 import { BookOpen } from 'lucide-react'
 import React from 'react'
 import CategoryTable from './_components/category-table'
+import CheckPagePermission from '@/components/check-page-permissoin'
+import { PERMISSION_MODULES } from '@/libs/utils'
 
 const Index = () => {
    return (
-      <PageAccess allowedRoles={['superadmin', 'admin', 'manager']}>
+      <CheckPagePermission allowPermission={{ module: PERMISSION_MODULES.CATEGORY, action: 'read' }} >
          <div className="p-6">
             <div className="flex items-center gap-3 mb-6">
                <BookOpen className="w-12 h-12 text-primary" />
@@ -16,7 +17,7 @@ const Index = () => {
             </div>
             <CategoryTable />
          </div>
-      </PageAccess>
+      </CheckPagePermission>
    )
 }
 

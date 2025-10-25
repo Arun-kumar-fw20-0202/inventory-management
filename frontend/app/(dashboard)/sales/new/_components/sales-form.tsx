@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useCreateSale } from '@/libs/mutation/sales/sales-mutations'
+import { useCreateSale, useUpdateSale } from '@/libs/mutation/sales/sales-mutations'
 import React, { useCallback, useRef, useMemo } from 'react'
 import { useFetchStock } from '@/libs/query/stock/stock-query'
 import { Autocomplete, AutocompleteItem } from "@heroui/autocomplete"
@@ -13,7 +13,7 @@ import { Plus, Trash, Receipt, User, Package, Building2, Mail, Phone, MapPin, Ca
 import toast from 'react-hot-toast'
 import { useSelector } from 'react-redux'
 
-const SalesForm = () => {
+const SalesForm = ({ saleId = null, initialSale = null } = {}) => {
   // State Management
   const [cusSupplierMode, setCusSupplierMode] = React.useState('customer')
   const [search, setSearch] = React.useState('')
@@ -33,8 +33,60 @@ const SalesForm = () => {
 
   const searchRef = useRef()
   const createSale = useCreateSale()
+  const updateSale = useUpdateSale()
 
-  const myinvoicenumber = useMemo(() => InvoiceNumberGenerator({ length: 8, prefix: 'INV-' }), [createSale.isSuccess])
+  const myinvoicenumber = useMemo(() => InvoiceNumberGenerator({ length: 8, prefix: 'INV-' }), [createSale.isSuccess, updateSale.isSuccess])
+
+  // keep an invoice number state so editing can display original invoice
+  const [invoiceNumber, setInvoiceNumber] = React.useState(myinvoicenumber)
+
+  // Prefill when editing an existing draft sale (support nested shapes)
+  React.useEffect(() => {
+    if (!initialSale) return
+    try {
+      // invoice
+      if (initialSale.invoiceNo) setInvoiceNumber(initialSale.invoiceNo)
+
+      // customer (initialSale.customerId may be an object)
+      if (initialSale.customerId) {
+        const cust = initialSale.customerId
+        setCustomer(cust._id || cust.id || cust)
+        setCustomerDetails(cust)
+      }
+
+      // cart/items: convert sale items to local cart structure
+      if (Array.isArray(initialSale.items)) {
+        const mapped = initialSale.items.map(it => {
+          const stock = it.stockId || {}
+          const productId = stock._id || it.stockId || it.productId
+          const productName = stock.productName || it.productName || stock.name || ''
+          const unitPrice = it.price ?? it.unitPrice ?? 0
+          const quantity = it.quantity ?? 0
+          const total = it.total ?? (quantity * unitPrice)
+          const description = stock.description ?? it.description ?? ''
+          const availableStock = stock.quantity ?? stock.qty ?? 0
+          return {
+            productId,
+            productName,
+            unitPrice,
+            quantity,
+            total,
+            description,
+            availableStock
+          }
+        })
+        setCart(mapped)
+      }
+
+      setDiscountValue(initialSale.discount ?? 0)
+      setTaxValue(initialSale.tax ?? 0)
+      setDiscountType(initialSale.discountType || 'fixed')
+      setTaxType(initialSale.taxType || 'fixed')
+
+    } catch (e) {
+      console.warn('Failed to prefill sale form', e)
+    }
+  }, [initialSale, myinvoicenumber])
   // Data Fetching
   const { data: stockData, isLoading: loadingStock } = useFetchStock({
     search,
@@ -190,21 +242,30 @@ const SalesForm = () => {
       taxType,
       discount: calculations.discountAmount,
       discountType,
-      invoiceNo: myinvoicenumber,
+    invoiceNo: invoiceNumber,
       grandTotal: calculations.grandTotal
     }
 
     try {
-      await createSale.mutateAsync(payload)
-      // toast.success('Sale created successfully!')
-      setCart([])
-      setCustomer(null)
-      setCustomerDetails({})
-      setDiscountValue(0)
-      setTaxValue(0)
+      if (saleId) {
+        // Update existing draft sale
+        await updateSale.mutateAsync({ id: saleId, data: payload })
+        toast.success('Sale updated')
+      } else {
+        await createSale.mutateAsync(payload)
+        // toast.success('Sale created successfully!')
+      }
+
+      // Reset form only when creating new sale
+      if (!saleId) {
+        setCart([])
+        setCustomer(null)
+        setCustomerDetails({})
+        setDiscountValue(0)
+        setTaxValue(0)
+      }
     } catch (err) {
       console.error(err)
-      toast.error(err?.response?.data?.message || err?.message || 'Error creating sale')
     }
   }
 
@@ -226,8 +287,8 @@ const SalesForm = () => {
             <BarChart3 className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold">Create New Sale</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Add products and complete the transaction</p>
+            <h2 className="text-2xl font-bold">{saleId ? 'Edit Sale' : 'Create New Sale'}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{saleId ? 'Update draft sale' : 'Add products and complete the transaction'}</p>
           </div>
         </div>
 
@@ -316,7 +377,7 @@ const SalesForm = () => {
             <div className="text-right">
               <div className="text-sm opacity-90">Invoice #</div>
               <div className="text-2xl font-bold">
-                {myinvoicenumber}
+                {invoiceNumber}
               </div>
             </div>
           </div>
@@ -579,12 +640,11 @@ const SalesForm = () => {
               color="primary" 
               size="lg"
               onPress={handleCreateSale} 
-              isLoading={createSale.isLoading}
+              isLoading={saleId ? updateSale.isLoading : createSale.isLoading}
               isDisabled={cart.length === 0 || !customer}
-              // className="w-full font-bold text-lg py-6"
               startContent={<Receipt className="w-6 h-6" />}
             >
-              Generate Bill
+              {saleId ? 'Update Sale' : 'Generate Bill'}
             </Button>
           </div>
         </div>

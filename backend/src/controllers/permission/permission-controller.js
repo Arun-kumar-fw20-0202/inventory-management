@@ -1,4 +1,5 @@
-const { Permission } = require('../../models/permission/permission-scheema')
+const { Permission } = require('../../models/permission/permission-scheema');
+const { adminPermission, managerPermission, staffPermission } = require('../../utils/permissions');
 const { success, error: sendError, forbidden } = require('../../utils/response')
 
 
@@ -7,8 +8,15 @@ const CreateOrUpdateUserPermissions = async (req, res) => {
         const orgNo = req.profile.orgNo;
         const { permissions } = req.body;
         const { userId } = req.params;
+        const activeRole = req.profile.activerole;
+        const filter = { userId }
 
-        let permissionDoc = await Permission.findOne({ userId, orgNo });
+        if(activeRole !== 'superadmin'){
+            filter.orgNo = orgNo
+        }
+
+
+        let permissionDoc = await Permission.findOne(filter);
         if (permissionDoc) {
             // Update existing permissions
             permissionDoc.permissions = permissions;
@@ -37,11 +45,23 @@ const CreateOrUpdateUserPermissions = async (req, res) => {
 const GetUserPermissions = async (req, res) => {
     try{
         const orgNo = req.profile.orgNo;
+        const activerole = req.profile.activerole
         const { userId } = req.params;
-        const permissionDoc = await Permission.findOne({ userId, orgNo });
-        if (!permissionDoc) {
-            return forbidden(res, 'No permissions found for this user');
+
+        const filter = { userId }
+
+        if(activerole !== 'superadmin'){
+            filter.orgNo = orgNo
         }
+
+        
+        const permissionDoc = await Permission.findOne(filter);
+
+        console.log({orgNo})
+        
+        // if (!permissionDoc) {
+        //     return forbidden(res, 'No permissions found for this user');
+        // }
         return success(res, 'Permissions fetched successfully', permissionDoc);
     }
     catch(err){
@@ -58,39 +78,22 @@ const ResetDefaultPermissions = async (req, res) => {
         // it will reset the permision base on the role
         let defaultPermissions = {};
         if(activeRole === 'admin'){
-            defaultPermissions = {
-                systemuser: { create: true, read: true, update: true, delete: true },
-                stock: { create: true, read: true, update: true, delete: true },
-                sales: { create: true, read: true, update: true, delete: true },
-                purchases: { create: true, read: true, update: true, delete: true },
-                reports: { create: false, read: true, update: false, delete: false },
-                organization: { create: false, read: true, update: true, delete: false },
-                sessions: { create: false, read: true, update: false, delete: false },
-            }
+            defaultPermissions = adminPermission
         }
         if(activeRole === 'manager'){
-            defaultPermissions = {
-                systemuser: { create: true, read: true, update: true, delete: true },
-                stock: { create: true, read: true, update: true, delete: false },
-                sales: { create: true, read: true, update: true, delete: false },
-                purchases: { create: true, read: true, update: true, delete: false },
-                reports: { create: false, read: true, update: false, delete: false },
-                organization: { create: false, read: true, update: false, delete: false },
-                sessions: { create: false, read: true, update: false, delete: false },
-            }
+            defaultPermissions = managerPermission
         }
         if(activeRole === 'staff'){
-            defaultPermissions = {
-                systemuser: { create: false, read: false, update: false, delete: false },
-                stock: { create: false, read: true, update: false, delete: false },
-                sales: { create: true, read: true, update: false, delete: false },
-                purchases: { create: true, read: true, update: false, delete: false },
-                reports: { create: false, read: false, update: false, delete: false },
-                organization: { create: false, read: false, update: false, delete: false },
-                sessions: { create: false, read: true, update: false, delete: false },
-            }
+            defaultPermissions = staffPermission
         }
-        let permissionDoc = await Permission.findOne({ userId, orgNo });
+
+        const filter = { userId }
+
+        if(activeRole !== 'superadmin'){
+            filter.orgNo = orgNo
+        }
+        
+        let permissionDoc = await Permission.findOne(filter);
         if (permissionDoc) {
             // Update existing permissions
             permissionDoc.permissions = defaultPermissions;
@@ -119,12 +122,8 @@ const ResetDefaultPermissions = async (req, res) => {
 
 const FetchMyPermissions = async (req, res) => {
     try{
-        const orgNo = req.profile.orgNo;
         const userId = req.profile._id;
-        const permissionDoc = await Permission.findOne({ userId, orgNo });
-        if (!permissionDoc) {
-            return forbidden(res, 'No permissions found for this user');
-        }
+        const permissionDoc = await Permission.findOne({ userId });
         return success(res, 'Permissions fetched successfully', permissionDoc);
     }
     catch(err){

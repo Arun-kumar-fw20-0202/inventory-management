@@ -12,7 +12,7 @@ const PermissionModuleSchema = new mongoose.Schema({
     systemuser: CRUDPermissions,
     stock: CRUDPermissions,
     sales: {...CRUDPermissions, approve: { type: Boolean, default: false }, reject: { type: Boolean, default: false }, complete: { type: Boolean, default: false  }},
-    purchases: {...CRUDPermissions , approve: { type: Boolean, default: false }, reject: { type: Boolean, default: false }, complete: { type: Boolean, default: false } },
+    purchases: {...CRUDPermissions , approve: { type: Boolean, default: false }, reject: { type: Boolean, default: false }, complete: { type: Boolean, default: false }, receive: { type: Boolean, default: false } },
     reports: CRUDPermissions,
     organization: CRUDPermissions,
     sessions: CRUDPermissions,

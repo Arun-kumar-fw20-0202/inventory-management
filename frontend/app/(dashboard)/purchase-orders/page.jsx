@@ -5,12 +5,15 @@ import { Button } from '@heroui/button'
 import { BookOpen, Plus } from 'lucide-react'
 import PurchaseOrdersTable from './_components/PurchaseOrdersTable'
 import { useRouter } from 'next/navigation'
+import CheckPagePermission from '@/components/check-page-permissoin'
+import { PERMISSION_MODULES } from '@/libs/utils'
+import { useHasPermission } from '@/libs/utils/check-permission'
 
 const PurchaseOrdersPage = () => {
   const router = useRouter()
 
   return (
-    <PageAccess allowedRoles={['all']}>
+    <CheckPagePermission allowPermission={{ module: PERMISSION_MODULES.PURCHASES, action: 'read' }} >
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -20,13 +23,9 @@ const PurchaseOrdersPage = () => {
               <p className="text-gray-600 dark:text-gray-300">Manage purchase orders and procurement</p>
             </div>
           </div>
-          <Button 
-            color="primary" 
-            startContent={<Plus className="w-4 h-4" />}
-            onPress={() => router.push('/create-order')}
-          >
-            Create Purchase Order
-          </Button>
+          {useHasPermission(PERMISSION_MODULES.PURCHASES, 'create') && (
+            <Button color="primary" startContent={<Plus className="w-4 h-4" />} onPress={() => router.push('/create-order')}>Create Purchase Order</Button>
+          )}
         </div>
 
         {/* Summary Cards */}
@@ -41,7 +40,7 @@ const PurchaseOrdersPage = () => {
           onClose={() => setIsCreateModalOpen(false)}
         /> */}
       </div>
-    </PageAccess>
+    </CheckPagePermission>
   )
 }
 

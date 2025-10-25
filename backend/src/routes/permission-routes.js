@@ -9,7 +9,7 @@ PermissionRouter.get('/me', RoleVerifyMiddleware('all'), FetchMyPermissions)
 PermissionRouter.post('/:userId', RoleVerifyMiddleware('superadmin', 'admin'), CreateOrUpdateUserPermissions)
 
 // Fetch permissions for a specific user
-PermissionRouter.get('/:userId', RoleVerifyMiddleware('superadmin', 'admin', 'manager'), GetUserPermissions)
+PermissionRouter.get('/:userId', RoleVerifyMiddleware('superadmin', 'admin'), GetUserPermissions)
 
 // Reset a user's permissions to role-based defaults
 PermissionRouter.post('/:userId/reset', RoleVerifyMiddleware('superadmin', 'admin'), ResetDefaultPermissions)

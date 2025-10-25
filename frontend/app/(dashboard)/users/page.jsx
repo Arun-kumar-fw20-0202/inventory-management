@@ -7,18 +7,17 @@ import UsersList from './_components/users-list';
 import { useDisclosure } from '@heroui/modal';
 import { Button } from '@heroui/button';
 import { Plus } from 'lucide-react';
+import CheckPagePermission from '@/components/check-page-permissoin';
+import { PERMISSION_MODULES } from '@/libs/utils';
 
 const Index = () => {
     const user = useSelector((state) => state.auth.user);
     const {isOpen, onOpen, onOpenChange} = useDisclosure()
     const activeRole = user?.data?.activerole
 
-    if(!activeRole || activeRole === 'staff') {
-        return <div className='text-center text-gray-500 mt-10'>You do not have permission to view this page.</div>
-    }
     
     return (
-        <PageAccess allowedRoles={['admin','manager', 'superadmin']}>
+        <CheckPagePermission allowPermission={{ module: PERMISSION_MODULES.SYSTEMUSER, action: 'read' }}>
             <CreateUserModal activerole={activeRole} isOpen={isOpen} onOpen={onOpen} onOpenChange={onOpenChange} />
             <div className="p-4">
                 <UsersList 
@@ -28,7 +27,7 @@ const Index = () => {
                     }
                 />
             </div>
-        </PageAccess>
+        </CheckPagePermission>
     )
 }
 

@@ -4,8 +4,6 @@ const { StockModal } = require('../../models/stock/stock-scheema');
 const { success, error } = require('../../utils/response');
 const mongoose = require('mongoose');
 const SuppliserCustomerModel = require('../../models/supplier/supplier-customer-scheema');
-const { sendNotification } = require('../../utils/notification-service');
-const { UserModal } = require('../../models/User');
 
 /**
  * Generate unique order number
@@ -105,35 +103,6 @@ const createPurchaseOrder = async (req, res) => {
       await purchaseOrder.save();
 
          // Notify on creation according to role rules:
-         // - staff -> notify admin + managers
-         // - manager -> notify admin
-         // - admin -> no notification (already a top-level user)
-         (async () => {
-            try {
-               const actorRole = req.profile?.activerole || 'staff';
-               const actorName = req.profile?.name || 'A user';
-               const orderNo = purchaseOrder.orderNumber || String(purchaseOrder._id);
-               const payload = {
-                  orgNo: req.profile.orgNo,
-                  title: `Purchase order created: ${orderNo}`,
-                  message: `${actorName} created a purchase order (${orderNo}).`,
-                  type: 'purchase:created',
-                  action: { url: `/purchase-orders/${purchaseOrder._id}` },
-                  relatedEntity: { entityType: 'PURCHASE_ORDER', entityId: purchaseOrder._id },
-                  metadata: { actor: { id: req.profile._id || req.profile.id, name: actorName, role: actorRole }, target: { id: purchaseOrder.createdBy } }
-               };
-
-               if (actorRole === 'staff') {
-                  // notify managers and admins (exclude actor)
-                  await sendNotification({ orgNo: req.profile.orgNo, roles: ['manager', 'admin'], excludeIds: [req.profile._id || req.profile.id], payload, includeAdmins: false });
-               } else if (actorRole === 'manager') {
-                  // notify admins only
-                  await sendNotification({ orgNo: req.profile.orgNo, roles: ['admin'], excludeIds: [req.profile._id || req.profile.id], payload, includeAdmins: false });
-               }
-            } catch (e) {
-               console.error('Notify on create purchase order failed', e);
-            }
-         })();
 
       // Populate related data for response
       const populatedOrder = await PurchaseOrderModal.findById(purchaseOrder._id)
@@ -175,28 +144,6 @@ const submitPurchaseOrder = async (req, res) => {
       await purchaseOrder.save();
 
       // Notify approvers (manager/admin) depending on submitter role
-      (async () => {
-         try {
-            const submitterRole = req.profile?.activerole || 'staff';
-            const recipientRoles = [];
-            if (submitterRole === 'manager') {
-               recipientRoles.push('admin');
-            } else {
-               recipientRoles.push('manager', 'admin');
-            }
-
-            // resolve recipients
-            const recipients = await UserModal.find({ orgNo: req.profile.orgNo, activerole: { $in: recipientRoles }, block_status: false }).select('_id').lean();
-            const recipientIds = recipients.map(r => r._id).filter(Boolean);
-            if (recipientIds.length > 0) {
-               const title = `Purchase order submitted: ${purchaseOrder.orderNumber || purchaseOrder._id}`;
-               const message = `${req.profile.name || 'A user'} has submitted a purchase order (${purchaseOrder.orderNumber || ''}). Please review and approve.`;
-               await sendNotification({ orgNo: req.profile.orgNo, userIds: recipientIds, excludeIds: [req.profile._id || req.profile.id], payload: { orgNo: req.profile.orgNo, title, message, type: 'purchase:submitted', action: { url: `/purchase-orders/${purchaseOrder._id}` } }, includeAdmins: true });
-            }
-         } catch (e) {
-            console.error('Notify on submit purchase order failed', e);
-         }
-      })();
 
       return success(res, 'Purchase order submitted for approval', { 
          id: purchaseOrder._id, 
@@ -233,34 +180,6 @@ const approvePurchaseOrder = async (req, res) => {
       purchaseOrder.status = 'Approved';
       purchaseOrder.approvedBy = userId;
       await purchaseOrder.save();
-
-      // Notify creator and admins about approval
-      (async () => {
-         try {
-            const creatorId = purchaseOrder.createdBy;
-            if (creatorId) {
-               let creator = null;
-               try { creator = await UserModal.findById(creatorId).select('name activerole').lean(); } catch(e) { console.warn('Failed to load creator for PO approval notification', e); }
-               const approverName = req.profile?.name || 'A user';
-               const creatorName = creator?.name || 'a user';
-               const orderNo = purchaseOrder.orderNumber || String(purchaseOrder._id);
-
-               const payloadCreator = {
-                  orgNo: purchaseOrder.orgNo,
-                  title: `Purchase order approved: ${orderNo}`,
-                  message: `${approverName} approved your purchase order (${orderNo}).`,
-                  type: 'purchase:approved',
-                  action: { url: `/purchase-orders/${purchaseOrder._id}` },
-                  relatedEntity: { entityType: 'PURCHASE_ORDER', entityId: purchaseOrder._id },
-                  metadata: { actor: { id: req.profile._id || req.profile.id, name: approverName, role: req.profile?.activerole }, target: { id: creatorId, name: creatorName } }
-               };
-               await sendNotification({ orgNo: purchaseOrder.orgNo, userIds: [creatorId], includeAdmins: false, payload: payloadCreator });
-
-               const payloadAdmin = { ...payloadCreator, type: 'purchase:approved:admin', message: `${approverName} approved ${creatorName}'s purchase order (${orderNo}).` };
-               await sendNotification({ orgNo: purchaseOrder.orgNo, roles: ['admin'], includeAdmins: false, payload: payloadAdmin });
-            }
-         } catch (e) { console.error('Notify on approve purchase order failed', e); }
-      })();
 
       return success(res, 'Purchase order approved successfully', { 
          id: purchaseOrder._id, 
@@ -302,34 +221,6 @@ const rejectPurchaseOrder = async (req, res) => {
             `Rejection Reason: ${reason}`;
       }
       await purchaseOrder.save();
-
-      // Notify creator and admins about rejection
-      (async () => {
-         try {
-            const creatorId = purchaseOrder.createdBy;
-            if (creatorId) {
-               let creator = null;
-               try { creator = await UserModal.findById(creatorId).select('name activerole').lean(); } catch(e) { console.warn('Failed to load creator for PO rejection notification', e); }
-               const actorName = req.profile?.name || 'A user';
-               const creatorName = creator?.name || 'a user';
-               const orderNo = purchaseOrder.orderNumber || String(purchaseOrder._id);
-
-               const payloadCreator = {
-                  orgNo: purchaseOrder.orgNo,
-                  title: `Purchase order rejected: ${orderNo}`,
-                  message: `${actorName} rejected your purchase order (${orderNo})${reason ? ` Reason: ${reason}` : ''}`,
-                  type: 'purchase:rejected',
-                  action: { url: `/purchase-orders/${purchaseOrder._id}` },
-                  relatedEntity: { entityType: 'PURCHASE_ORDER', entityId: purchaseOrder._id },
-                  metadata: { actor: { id: req.profile._id || req.profile.id, name: actorName, role: req.profile?.activerole }, target: { id: creatorId, name: creatorName }, reason }
-               };
-               await sendNotification({ orgNo: purchaseOrder.orgNo, userIds: [creatorId], includeAdmins: false, payload: payloadCreator });
-
-               const payloadAdmin = { ...payloadCreator, type: 'purchase:rejected:admin', message: `${actorName} rejected ${creatorName}'s purchase order (${orderNo})${reason ? ` Reason: ${reason}` : ''}` };
-               await sendNotification({ orgNo: purchaseOrder.orgNo, roles: ['admin'], includeAdmins: false, payload: payloadAdmin });
-            }
-         } catch (e) { console.error('Notify on reject purchase order failed', e); }
-      })();
 
       return success(res, 'Purchase order rejected successfully', { 
          id: purchaseOrder._id, 
@@ -486,51 +377,6 @@ const receivePurchaseOrder = async (req, res) => {
 
          purchaseOrder.status = allItemsReceived ? 'Completed' : 'PartiallyReceived';
          await purchaseOrder.save({ session });
-
-         // Notify creator and admins about receive/completion
-         (async () => {
-            try {
-               const creatorId = purchaseOrder.createdBy;
-               if (creatorId) {
-                  let creator = null;
-                  try { creator = await UserModal.findById(creatorId).select('name activerole').lean(); } catch(e) { console.warn('Failed to load creator for PO receive notification', e); }
-                  const actorName = req.profile?.name || 'A user';
-                  const creatorName = creator?.name || 'a user';
-                  const orderNo = purchaseOrder.orderNumber || String(purchaseOrder._id);
-
-                  const titleCreator = allItemsReceived ? `Purchase order completed: ${orderNo}` : `Purchase order partially received: ${orderNo}`;
-                  const messageCreator = allItemsReceived ? `${actorName} completed receiving items for your purchase order (${orderNo}).` : `${actorName} received items for your purchase order (${orderNo}).`;
-                  const payloadCreator = {
-                     orgNo: purchaseOrder.orgNo,
-                     title: titleCreator,
-                     message: messageCreator,
-                     type: allItemsReceived ? 'purchase:received:completed' : 'purchase:received:partial',
-                     action: { url: `/purchase-orders/${purchaseOrder._id}` },
-                     relatedEntity: { entityType: 'PURCHASE_ORDER', entityId: purchaseOrder._id },
-                     metadata: { actor: { id: req.profile._id || req.profile.id, name: actorName, role: req.profile?.activerole }, target: { id: creatorId, name: creatorName } }
-                  };
-                  // If the actor is staff, notify managers+admins (do not notify the actor)
-                  const actorRole = req.profile?.activerole || 'staff';
-                  if (actorRole === 'staff') {
-                     // notify managers and admins about staff receive
-                     const payloadManagers = {
-                        ...payloadCreator,
-                        type: allItemsReceived ? 'purchase:received:completed:notify' : 'purchase:received:partial:notify',
-                        message: allItemsReceived ? 
-                           `${actorName} completed receiving items for ${creatorName}'s purchase order (${orderNo}).` 
-                           : 
-                           `${actorName} received items for ${creatorName}'s purchase order (${orderNo}).`
-                     };
-                     await sendNotification({ orgNo: purchaseOrder.orgNo, roles: ['manager', 'admin'], excludeIds: [req.profile._id || req.profile.id], includeAdmins: false, payload: payloadManagers });
-                  } else {
-                     // Actor is manager/admin — notify creator and admins (existing behavior)
-                     await sendNotification({ orgNo: purchaseOrder.orgNo, userIds: [creatorId], includeAdmins: false, payload: payloadCreator });
-                     const payloadAdmin = { ...payloadCreator, type: allItemsReceived ? 'purchase:received:completed:admin' : 'purchase:received:partial:admin', message: allItemsReceived ? `${actorName} completed receiving items for ${creatorName}'s purchase order (${orderNo}).` : `${actorName} received items for ${creatorName}'s purchase order (${orderNo}).` };
-                     await sendNotification({ orgNo: purchaseOrder.orgNo, roles: ['admin'], includeAdmins: false, payload: payloadAdmin });
-                  }
-               }
-            } catch (e) { console.error('Notify on receive purchase order failed', e); }
-         })();
 
          return success(res, 'Items received successfully', { 
             id: purchaseOrder._id, 

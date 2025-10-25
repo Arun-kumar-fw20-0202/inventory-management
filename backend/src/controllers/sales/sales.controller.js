@@ -5,9 +5,8 @@ const { success, error: sendError, notFound, forbidden, error } = require('../..
 const { StockModal } = require('../../models/stock/stock-scheema');
 const SupplierCustomer = require('../../models/supplier/supplier-customer-scheema');
 const { SaleOrder } = require('../../models/sales/sales-scheema');
-const Notification = require('../../models/notification/notification-scheema');
-const { sendNotification } = require('../../utils/notification-service');
-const { UserModal } = require('../../models/User');
+const { StockMakerAttachmentModel } = require('../../models/stock/stock-maker-attachments');
+const { StockAttachmentModel } = require('../../models/stock/stock-attachments-schema');
 
 // In-memory cache placeholder
 const analyticsCache = new Map();
@@ -83,29 +82,7 @@ const SubmitSale = async (req, res) => {
     } }, { new: true }).lean();
 
     // Send notification to approvers (admins/managers) depending on submitter role
-    (async () => {
-      try {
-        const submitterRole = req.profile?.activerole || 'staff';
-        const recipientRoles = [];
-        if (submitterRole === 'manager') {
-          recipientRoles.push('admin');
-        } else {
-          // staff submits -> notify both managers and admins
-          recipientRoles.push('manager', 'admin');
-        }
-
-        const recipients = await UserModal.find({ orgNo, activerole: { $in: recipientRoles }, block_status: false }).select('_id').lean();
-        const recipientIds = recipients.map(r => r._id).filter(Boolean);
-        if (recipientIds.length > 0) {
-          const title = `Sale submitted: ${updated.orderNo || updated._id}`;
-          const message = `${req.profile.name || 'A user'} has submitted a sale (${updated.orderNo || ''}). Please review and approve.`;
-          // Ensure admins always get notified; exclude the submitter
-          await sendNotification({ orgNo, userIds: recipientIds, excludeIds: [req.profile._id], payload: { orgNo, title, message, type: 'sale:submitted', action: { url: `/sales/${updated._id}` } }, includeAdmins: true });
-        }
-      } catch (notifyErr) {
-        logger.error('Notify on submit sale failed', notifyErr);
-      }
-    })();
+    
     return success(res, 'Sale submitted for approval', updated);
   } catch (err) {
     logger.error('Submit sale error', err);
@@ -152,6 +129,60 @@ const ApproveSale = async (req, res) => {
       }
     }
 
+    // --- Attachment handling ---
+    // For each stock item being sold, find maker->attachments mapping and compute total required per attachment
+    // StockMakerAttachmentModel stores documents mapping a stockId to attachments: [{ attachmentId, quantity }]
+    const makerDocs = await StockMakerAttachmentModel.find({ stockId: { $in: stockIds }, orgNo }).session(session).lean();
+    // map stockId -> attachments array
+    const makerMap = new Map(makerDocs.map(d => [String(d.stockId), d.attachments || []]));
+
+    // aggregate required qty per attachmentId
+    const requiredByAttachment = new Map(); // attachmentId -> requiredQty
+    for (const it of sale.items) {
+      const attachmentsForStock = makerMap.get(String(it.stockId)) || [];
+      for (const attach of attachmentsForStock) {
+        const aid = String(attach.attachmentId);
+        const perUnit = Number(attach.quantity || 0);
+        if (perUnit <= 0) continue; // nothing to consume
+        const need = perUnit * Number(it.quantity || 0);
+        requiredByAttachment.set(aid, (requiredByAttachment.get(aid) || 0) + need);
+      }
+    }
+
+    // Verify availability of attachments
+    if (requiredByAttachment.size > 0) {
+      const attachmentIds = Array.from(requiredByAttachment.keys());
+      const attachments = await StockAttachmentModel.find({ _id: { $in: attachmentIds }, orgNo }).session(session).select('qty').lean();
+      const attMap = new Map(attachments.map(a => [String(a._id), a]));
+
+      for (const [aid, reqQty] of requiredByAttachment.entries()) {
+        const att = attMap.get(String(aid));
+        if (!att) {
+          await session.abortTransaction();
+          session.endSession();
+          return notFound(res, `Attachment ${aid} not found`);
+        }
+        if (att.qty < reqQty) {
+          await session.abortTransaction();
+          session.endSession();
+          return sendError(res, `Insufficient attachment '${aid}' (need ${reqQty}, have ${att.qty})`);
+        }
+      }
+
+      // prepare bulk ops to decrement attachments
+      const attachmentBulkOps = Array.from(requiredByAttachment.entries()).map(([aid, reqQty]) => ({
+        updateOne: {
+          filter: { _id: aid, orgNo, qty: { $gte: reqQty } },
+          update: { $inc: { qty: -Math.abs(reqQty) } }
+        }
+      }));
+
+      if (attachmentBulkOps.length > 0) {
+        const attRes = await StockAttachmentModel.bulkWrite(attachmentBulkOps, { session });
+        // Note: bulkWrite result can be inspected for nModified etc. We trust the filter guarded by qty to prevent negatives.
+      }
+    }
+
     // Deduct stock using bulkWrite
     const bulkOps = sale.items.map(it => ({
       updateOne: {
@@ -170,61 +201,6 @@ const ApproveSale = async (req, res) => {
     session.endSession();
 
     // Notify creator that sale was approved
-    (async () => {
-      try {
-        const creatorId = updated.createdBy;
-        if (creatorId) {
-          // fetch creator user to include name in admin message
-          let creator = null;
-          try {
-            creator = await UserModal.findById(creatorId).select('name activerole').lean();
-          } catch (e) {
-            logger.warn('Failed to load creator user for notification', e);
-          }
-
-          const approverName = req.profile?.name || 'A user';
-          const creatorName = creator?.name || 'a user';
-          const orderNo = updated.orderNo || String(updated._id);
-
-          // 1) Notify the creator (personalized)
-          const titleCreator = `Sale approved: ${orderNo}`;
-          const messageCreator = `${approverName} approved your sale (${orderNo}).`;
-          const payloadCreator = {
-            orgNo,
-            title: titleCreator,
-            message: messageCreator,
-            type: 'sale:approved',
-            action: { url: `/sales/${updated._id}` },
-            relatedEntity: { entityType: 'ORDER', entityId: updated._id },
-            metadata: {
-              actor: { id: req.profile._id, name: approverName, role: req.profile?.activerole },
-              target: { id: creatorId, name: creatorName }
-            }
-          };
-          await sendNotification({ orgNo, userIds: [creatorId], includeAdmins: false, payload: payloadCreator });
-
-          // 2) Notify admins with staff name included
-          const titleAdmin = `Sale approved: ${orderNo}`;
-          const messageAdmin = `${approverName} approved ${creatorName}'s sale (${orderNo}).`;
-          const payloadAdmin = {
-            orgNo,
-            title: titleAdmin,
-            message: messageAdmin,
-            type: 'sale:approved:admin',
-            action: { url: `/sales/${updated._id}` },
-            relatedEntity: { entityType: 'ORDER', entityId: updated._id },
-            metadata: {
-              actor: { id: req.profile._id, name: approverName, role: req.profile?.activerole },
-              target: { id: creatorId, name: creatorName }
-            }
-          };
-          await sendNotification({ orgNo, roles: ['admin'], includeAdmins: false, payload: payloadAdmin });
-        }
-      } catch (notifyErr) {
-        logger.error('Notify on approve sale failed', notifyErr);
-      }
-    })();
-
     return success(res, 'Sale approved and stock updated', updated);
   } catch (err) {
     await session.abortTransaction();
@@ -248,54 +224,7 @@ const RejectSale = async (req, res) => {
     const updated = await SaleOrder.findOneAndUpdate({ _id: id, orgNo }, { $set: { status: 'rejected', rejectedBy: req.profile._id, rejectedAt: new Date(), rejectedReason: reason || '' } }, { new: true }).lean();
 
     // Notify creator about rejection and admins with staff name
-    (async () => {
-      try {
-        const creatorId = updated.createdBy;
-        if (creatorId) {
-          // load creator to get name
-          let creator = null;
-          try {
-            creator = await UserModal.findById(creatorId).select('name activerole').lean();
-          } catch (e) {
-            logger.warn('Failed to load creator user for rejection notification', e);
-          }
-
-          const actorName = req.profile?.name || 'A user';
-          const creatorName = creator?.name || 'a user';
-          const orderNo = updated.orderNo || String(updated._id);
-
-          // personalized to creator
-          const titleCreator = `Sale rejected: ${orderNo}`;
-          const messageCreator = `${actorName} rejected your sale (${orderNo})${reason ? ` Reason: ${reason}` : ''}`;
-          const payloadCreator = {
-            orgNo,
-            title: titleCreator,
-            message: messageCreator,
-            type: 'sale:rejected',
-            action: { url: `/sales/${updated._id}` },
-            relatedEntity: { entityType: 'ORDER', entityId: updated._id },
-            metadata: { actor: { id: req.profile._id, name: actorName, role: req.profile?.activerole }, target: { id: creatorId, name: creatorName }, reason }
-          };
-          await sendNotification({ orgNo, userIds: [creatorId], includeAdmins: false, payload: payloadCreator });
-
-          // notify admins with staff name included
-          const titleAdmin = `Sale rejected: ${orderNo}`;
-          const messageAdmin = `${actorName} rejected ${creatorName}'s sale (${orderNo})${reason ? ` Reason: ${reason}` : ''}`;
-          const payloadAdmin = {
-            orgNo,
-            title: titleAdmin,
-            message: messageAdmin,
-            type: 'sale:rejected:admin',
-            action: { url: `/sales/${updated._id}` },
-            relatedEntity: { entityType: 'ORDER', entityId: updated._id },
-            metadata: { actor: { id: req.profile._id, name: actorName, role: req.profile?.activerole }, target: { id: creatorId, name: creatorName }, reason }
-          };
-          await sendNotification({ orgNo, roles: ['admin'], includeAdmins: false, payload: payloadAdmin });
-        }
-      } catch (notifyErr) {
-        logger.error('Notify on reject sale failed', notifyErr);
-      }
-    })();
+  
     return success(res, 'Sale rejected', updated);
   } catch (err) {
     logger.error('Reject sale error', err);
@@ -320,51 +249,6 @@ const CompleteSale = async (req, res) => {
     ).lean();
 
       // Notify creator about completion and admins with staff name
-      (async () => {
-        try {
-          const creatorId = updated.createdBy;
-          if (creatorId) {
-            let creator = null;
-            try {
-              creator = await UserModal.findById(creatorId).select('name activerole').lean();
-            } catch (e) {
-              logger.warn('Failed to load creator user for completion notification', e);
-            }
-
-            const actorName = req.profile?.name || 'A user';
-            const creatorName = creator?.name || 'a user';
-            const orderNo = updated.orderNo || String(updated._id);
-
-            const titleCreator = `Sale completed: ${orderNo}`;
-            const messageCreator = `${actorName} completed your sale (${orderNo}).`;
-            const payloadCreator = {
-              orgNo,
-              title: titleCreator,
-              message: messageCreator,
-              type: 'sale:completed',
-              action: { url: `/sales/${updated._id}` },
-              relatedEntity: { entityType: 'ORDER', entityId: updated._id },
-              metadata: { actor: { id: req.profile._id, name: actorName, role: req.profile?.activerole }, target: { id: creatorId, name: creatorName } }
-            };
-            await sendNotification({ orgNo, userIds: [creatorId], includeAdmins: false, payload: payloadCreator });
-
-            const titleAdmin = `Sale completed: ${orderNo}`;
-            const messageAdmin = `${actorName} completed ${creatorName}'s sale (${orderNo}).`;
-            const payloadAdmin = {
-              orgNo,
-              title: titleAdmin,
-              message: messageAdmin,
-              type: 'sale:completed:admin',
-              action: { url: `/sales/${updated._id}` },
-              relatedEntity: { entityType: 'ORDER', entityId: updated._id },
-              metadata: { actor: { id: req.profile._id, name: actorName, role: req.profile?.activerole }, target: { id: creatorId, name: creatorName } }
-            };
-            await sendNotification({ orgNo, roles: ['admin'], includeAdmins: false, payload: payloadAdmin });
-          }
-        } catch (notifyErr) {
-          logger.error('Notify on complete sale failed', notifyErr);
-        }
-      })();
 
     // After marking completed, update customer metrics atomically (best-effort)
     try {
@@ -434,7 +318,7 @@ const GetAllSales = async (req, res) => {
     }
 
     // Role-based filtering for draft data
-    if (req.profile.activerole === 'staff') {
+    if (req.profile.activerole !== 'admin') {
       filter.createdBy = req.profile._id;
     } else  {
       filter.$or = [
@@ -497,7 +381,7 @@ const GetSaleById = async (req, res) => {
       .populate('approvedBy', 'name email')
       .populate('rejectedBy', 'name email')
       .populate('completedBy', 'name email')
-      .populate('items.stockId', 'productName sku description')
+      .populate('items.stockId', 'productName sku description quantity')
       .lean();
     if (!sale) return notFound(res, 'Sale not found');
     // staff may only view own
@@ -616,6 +500,26 @@ const GetSalesAnalytics = async (req, res) => {
   }
 };
 
+// Update sale only draft status can be updated 
+const UpdateSaleController = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const activerole = req.profile.activerole;
+    const orgNo = req.profile.orgNo;
+    const updateData = req.body;
+    const sale = await SaleOrder.findOne({ _id: id, orgNo }).select('status').lean();
+    if (!sale) return notFound(res, 'Sale not found');
+    if (activerole != 'admin') {
+      if (sale.status !== 'draft') return sendError(res, 'Only draft sales can be updated', 400);
+    }
+    const updated = await SaleOrder.findOneAndUpdate({ _id: id, orgNo }, { $set: updateData }, { new: true }).lean();
+    return success(res, 'Sale updated', updated);
+  } catch (err) {
+    logger.error('Update sale error', err);
+    return sendError(res, err.message || 'Internal server error');
+  }
+}
+
 module.exports = {
   createSaleSale,
   SubmitSale,
@@ -626,5 +530,6 @@ module.exports = {
   GetAllSales,
   GetSaleById,
   DeleteSale,
+  UpdateSaleController,
   GetSalesAnalytics
 };

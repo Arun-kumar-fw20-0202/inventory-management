@@ -30,10 +30,11 @@ PurchaseOrderRoutes.get('/', validateGetPurchaseOrders,RoleVerifyMiddleware('all
 PurchaseOrderRoutes.get('/:id', validatePurchaseOrderId, RoleVerifyMiddleware("all"), checkPermissions(PERMISSION_MODULES.PURCHASES, 'read'), getPurchaseOrderById);
 
 // to do with permissions
-PurchaseOrderRoutes.patch('/:id/submit', validatePurchaseOrderId, RoleVerifyMiddleware("manager" , 'admin', 'staff'), submitPurchaseOrder);
-PurchaseOrderRoutes.patch('/:id/approve', validatePurchaseOrderId, RoleVerifyMiddleware('admin', 'manager'), approvePurchaseOrder);
-PurchaseOrderRoutes.patch('/:id/reject', validateRejectPurchaseOrder,RoleVerifyMiddleware('admin', 'manager'), rejectPurchaseOrder);
-PurchaseOrderRoutes.patch('/:id/receive', validateReceivePurchaseOrder, RoleVerifyMiddleware('admin', 'manager', 'staff'), receivePurchaseOrder);
+PurchaseOrderRoutes.patch('/:id/submit', validatePurchaseOrderId, RoleVerifyMiddleware("all"), submitPurchaseOrder);
+// approval/rejection/receive require explicit module permissions
+PurchaseOrderRoutes.patch('/:id/approve', validatePurchaseOrderId, RoleVerifyMiddleware('admin', 'manager'), checkPermissions(PERMISSION_MODULES.PURCHASES, 'can-approve'), approvePurchaseOrder);
+PurchaseOrderRoutes.patch('/:id/reject', validateRejectPurchaseOrder,RoleVerifyMiddleware('admin', 'manager'), checkPermissions(PERMISSION_MODULES.PURCHASES, 'can-reject'), rejectPurchaseOrder);
+PurchaseOrderRoutes.patch('/:id/receive', validateReceivePurchaseOrder, RoleVerifyMiddleware('all'), checkPermissions(PERMISSION_MODULES.PURCHASES, 'can-receive'), receivePurchaseOrder);
 
 
 module.exports = {

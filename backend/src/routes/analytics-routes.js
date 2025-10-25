@@ -14,7 +14,7 @@ AnalyticsRouter.get("/top-selling-products", RoleVerifyMiddleware('all') , check
 // Customer Insights
 AnalyticsRouter.get("/customer-insights", RoleVerifyMiddleware('all') , checkPermissions(PERMISSION_MODULES.REPORTS, 'read'), CustomerInsightsController)
 // Inventory Turnover
-AnalyticsRouter.get("/inventory-turnover", RoleVerifyMiddleware('admin') , checkPermissions(PERMISSION_MODULES.REPORTS, 'read'), InventoryTurnoverController)
+AnalyticsRouter.get("/inventory-turnover", RoleVerifyMiddleware('all') , checkPermissions(PERMISSION_MODULES.REPORTS, 'read'), InventoryTurnoverController)
 // Sales by Region
 AnalyticsRouter.get("/sales-by-region", RoleVerifyMiddleware('all') , checkPermissions(PERMISSION_MODULES.REPORTS, 'read'), SalesByRegionController)
 // Profit Margins

@@ -12,7 +12,7 @@ const ResetPassword = (params) => {
     const token = params?.searchParams?.token;
     const email = params?.searchParams?.email;
 
-    console.log({token, email})
+    // console.log({token, email})
 
     const [showPassword, setShowPassword] = useState({
         password: false,

@@ -1,3 +1,4 @@
+const { StockMakerAttachmentModel } = require("../../models/stock/stock-maker-attachments");
 const { StockModal } = require("../../models/stock/stock-scheema");
 const mongoose = require("mongoose");
 
@@ -733,14 +734,15 @@ const getStockByIdController = async (req, res) => {
       const cacheKey = getCacheKey(req.profile.orgNo, 'single', { id, includeHistory, includeAnalytics });
       let cachedData = getCache(cacheKey);
       
-      if (cachedData) {
-         return res.json({
-            success: true,
-            data: cachedData,
-            cached: true,
-            message: "Stock retrieved successfully"
-         });
-      }
+      // if (cachedData) {
+      //    return res.json({
+      //       success: true,
+      //       data: cachedData,
+            
+      //       cached: true,
+      //       message: "Stock retrieved successfully"
+      //    });
+      // }
 
       const stock = await StockModal.findOne({ 
          _id: id, 
@@ -748,6 +750,17 @@ const getStockByIdController = async (req, res) => {
       })
       .populate('createdBy', 'name email role')
       .populate('updatedBy', 'name email role')
+      .populate('category', 'name')
+      .populate('warehouse', 'name location')
+      .lean();
+
+      // Fetch attachments
+      const attachments = await StockMakerAttachmentModel.find({
+         stockId: id,
+         orgNo: req.profile.orgNo
+      })
+      .populate('attachments.attachmentId', 'name description')
+      .select('attachments')
       .lean();
 
       if (!stock) {
@@ -815,11 +828,12 @@ const getStockByIdController = async (req, res) => {
       }
 
       // Cache the result
-      setCache(cacheKey, stock, 2 * 60 * 1000); // Cache for 2 minutes
+      setCache(cacheKey, stock, attachments, 2 * 60 * 1000); // Cache for 2 minutes
 
       return res.json({
          success: true,
-         data: stock, 
+         data: stock,
+         attachments: attachments[0]?.attachments || [], 
          message: "Stock retrieved successfully"
       });
 

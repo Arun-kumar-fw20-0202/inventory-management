@@ -71,7 +71,7 @@ const SalesList = () => {
           userData={(data) => setFilters({...filters, customerId: data?._id || null, page: 1})}
         />
 
-        {activerole !== 'staff' && (
+        {activerole === 'admin' && (
           <UsersAutocomplete 
             className='mx-w-xs'
             variant='bordered'

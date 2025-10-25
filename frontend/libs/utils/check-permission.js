@@ -13,7 +13,20 @@ const ACTION_MAPPING = {
   create: 'CREATE',
   read: 'VIEW', // older defaults used VIEW for read
   update: 'EDIT',
-  delete: 'DELETE'
+  delete: 'DELETE',
+  approve: 'APPROVE',
+  reject: 'REJECT',
+  complete: 'COMPLETE',
+  receive: 'RECEIVE'
+}
+
+// Client-side aliasing to match backend schema keys
+const ACTION_ALIASES = {
+  'can-approve': 'approve',
+  'can-reject': 'reject',
+  'can-complete': 'complete',
+  'can-receive': 'receive',
+  'receive': 'receive'
 }
 
 function normalizePermissions(input) {
@@ -41,7 +54,8 @@ export function hasPermission(permissionsInput, moduleKey, action) {
   const mod = findModule(perms, moduleKey)
   if (!mod) return false
 
-  const act = String(action).toLowerCase()
+  let act = String(action).toLowerCase()
+  if (ACTION_ALIASES[act]) act = ACTION_ALIASES[act]
 
   // If module entry uses boolean flags like { create: true }
   if (typeof mod === 'object') {
@@ -62,12 +76,8 @@ export function hasPermission(permissionsInput, moduleKey, action) {
 
 export function useHasPermission(moduleKey, action) {
     const perms = useSelector((s) => s?.permissions?.permissions)
-    console.log('perms in hook', perms == null ? 'null/undefined' : {perms})
-    if (perms == null) {
-        console.log('No permissions found in state')
-        return false
-    }
-    return hasPermission(perms, moduleKey, action)
+  if (perms == null) return false
+  return hasPermission(perms, moduleKey, action)
 }
 
 export default hasPermission

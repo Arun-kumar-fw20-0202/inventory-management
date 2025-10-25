@@ -1,25 +1,14 @@
 'use client'
 import React, { useState } from 'react'
-import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-} from '@heroui/modal'
+
 import { Button } from '@heroui/button'
 import { Card, CardBody, CardHeader } from '@heroui/card'
-import { Input } from '@heroui/input'
-import { Divider } from '@heroui/divider'
 import { 
   Package, 
   Truck, 
-  User, 
-  Calendar, 
   FileText,
   Check,
   X,
-  Edit
 } from 'lucide-react'
 import { 
   useFetchPurchaseOrderById,
@@ -30,8 +19,9 @@ import {
 import PurchaseOrderStatusBadge from './PurchaseOrderStatusBadge'
 import ReceiveItemsModal from './ReceiveItemsModal'
 import { formatCurrency, formatDate, formatDateRelative } from '@/libs/utils'
-import { Drawer, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader } from '@heroui/drawer'
 import { useSelector } from 'react-redux'
+import { useHasPermission } from '@/libs/utils/check-permission'
+import { PERMISSION_MODULES } from '@/libs/utils'
 import ConfirmActionModal from '@/app/(dashboard)/sales/all/_components/ConfirmActionModal'
 
 const PurchaseOrderDetailsModal = ({ orderId }) => {
@@ -53,6 +43,11 @@ const PurchaseOrderDetailsModal = ({ orderId }) => {
   const rejectPurchaseOrder = useRejectPurchaseOrder()
 
   const order = orderResponse?.data
+
+  // permission checks (hooks must be called at top-level)
+  const canApprovePerm = useHasPermission(PERMISSION_MODULES.PURCHASES, 'approve')
+  const canRejectPerm = useHasPermission(PERMISSION_MODULES.PURCHASES, 'reject')
+  const canReceivePerm = useHasPermission(PERMISSION_MODULES.PURCHASES, 'receive')
 
 
   const handleSubmitOrder = async () => {
@@ -136,13 +131,19 @@ const PurchaseOrderDetailsModal = ({ orderId }) => {
     }
 
     if (order?.status === 'PendingApproval' && whocanapprovereject.includes(user?.activerole)) {
-      buttons.push(
-        <Button size='sm' key="approve" color="success" startContent={<Check className="w-4 h-4" />} onPress={handleApproveOrder} isLoading={approvePurchaseOrder.isPending} >Approve</Button>,
-        <Button size='sm' key="reject" color="danger" variant="flat" startContent={<X className="w-4 h-4" />} onPress={handleRejectOrder} isLoading={rejectPurchaseOrder.isPending}>Reject</Button>
-      )
+      if (canApprovePerm) {
+        buttons.push(
+          <Button size='sm' key="approve" color="success" startContent={<Check className="w-4 h-4" />} onPress={handleApproveOrder} isLoading={approvePurchaseOrder.isPending} >Approve</Button>
+        )
+      }
+      if (canRejectPerm) {
+        buttons.push(
+          <Button size='sm' key="reject" color="danger" variant="flat" startContent={<X className="w-4 h-4" />} onPress={handleRejectOrder} isLoading={rejectPurchaseOrder.isPending}>Reject</Button>
+        )
+      }
     }
 
-    if (order?.status === 'Approved' || order?.status === 'PartiallyReceived') {
+    if ((order?.status === 'Approved' || order?.status === 'PartiallyReceived') && canReceivePerm) {
       buttons.push(
         <Button
           key="receive"

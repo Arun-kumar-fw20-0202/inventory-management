@@ -1,28 +1,72 @@
 'use client'
 import React from 'react'
-import { useSelector } from 'react-redux';
-import StaffDashboard from './staff-dashboard';
-import AdminDashboard from './admin-dashboard';
-import SuperadminDashboard from './superadmin-dashboard';
-import { useHasPermission } from '@/libs/utils/check-permission';
+import { useSelector } from 'react-redux'
+import DashboardTopProducts from './TopProducts'
+import DashboardLowStockProducts from './LowStockProducts'
+import DashboardRecentSales from './RecentSales'
+import DashboardRevenueSummary from './RevenueSummary'
+import DashboardSalesSummary from './SalesSummary'
+import DashPurchaseOrderSummary from './dash-purchase-order-summary'
+import DashPendingPurchaseOrders from './dash-pending-purchase-orders'
+import DashTopCustomers from './dash-top-customers'
+import { useHasPermission } from '@/libs/utils/check-permission'
+import { PERMISSION_MODULES } from '@/libs/utils'
+import { Divider } from '@heroui/divider'
 
 const Dashboard = () => {
-    const user = useSelector((state) => state.auth.user);
-    const activeRole = user?.data?.activerole    
-    
-    if(activeRole === 'staff' || activeRole == 'manager') {
-        return <StaffDashboard />
-    }
-    // if(activeRole === 'manager') {
-    //     return <ManagerDashboard />
-    // }
-    if(activeRole === 'admin') {
-        return <AdminDashboard />
-    }
-    if(activeRole === 'superadmin') {
-        return <SuperadminDashboard />
-    }
+    const user = useSelector((state) => state.auth.user)
+    const activeRole = user?.data?.activerole
+    const hasSalePermission = useHasPermission(PERMISSION_MODULES.SALES, 'read')
+    const hasStockPermission = useHasPermission(PERMISSION_MODULES.STOCK, 'read')
+    const hasPurchasePermission = useHasPermission(PERMISSION_MODULES.PURCHASES, 'read')
+    const hasCustomerPermission = useHasPermission(PERMISSION_MODULES.CUSTOMER, 'read')
 
+    return (
+        <div>
+            <div className="">
+                <h1 className="text-2xl font-bold mb-4">
+                    Welcome back : {user?.data?.name}
+                </h1>
+                <div className="grid grid-cols-3 gap-4">
+                    <div className="col-span-2 gap-8 flex flex-col">
+                        {hasSalePermission && (
+                            <DashboardRecentSales params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.SALES, 'read')}}/>
+                        )}
+                        <Divider />
+                        {hasStockPermission && (
+                            <DashboardLowStockProducts params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.STOCK, 'read')}} />
+                        )}
+                        <Divider />
+                        {hasPurchasePermission && (
+                            <DashPendingPurchaseOrders params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.PURCHASES, 'read')}} />
+                        )}
+                    </div>
+                    <div className="col-span-1 gap-4 flex flex-col">
+                        {hasSalePermission && (
+                            <>
+                                <DashboardRevenueSummary params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.SALES, 'read')}} />
+                                <Divider />
+                                <DashboardSalesSummary params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.SALES, 'read')}} />
+                                <Divider />
+                                <DashboardTopProducts params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.SALES, 'read')}} />
+                                <Divider />
+                            </>
+                        )}
+                        
+                        {hasPurchasePermission &&  (
+                            <DashPurchaseOrderSummary params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.PURCHASES, 'read')}} />
+                        )}
+                        
+                        <Divider />
+
+                        {hasCustomerPermission &&  (
+                            <DashTopCustomers params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.CUSTOMER, 'read')}} />
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
 }
 
 export default Dashboard

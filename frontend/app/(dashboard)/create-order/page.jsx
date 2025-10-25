@@ -6,7 +6,7 @@ import { Button } from '@heroui/button'
 import { Textarea, Input } from '@heroui/input'
 import { Boxes, IndianRupee, Plus, Package, Calendar, FileText, Receipt, Trash2, ShoppingCart } from 'lucide-react'
 import React from 'react'
-import { formatCurrency } from '@/libs/utils'
+import { formatCurrency, PERMISSION_MODULES } from '@/libs/utils'
 import { useForm, Controller, useFieldArray, useWatch } from 'react-hook-form'
 import { useCreatePurchaseOrder } from '@/libs/mutation/purchase-order/purchase-order-mutation'
 import SelectProductDrawr from './_components/select-product'
@@ -14,6 +14,7 @@ import { useDisclosure } from '@heroui/modal'
 import { Card } from '@heroui/card'
 import { Select, SelectItem } from '@heroui/select'
 import { Divider } from '@heroui/divider'
+import CheckPagePermission from '@/components/check-page-permissoin'
 
 const Index = () => {
     const {isOpen, onOpen, onOpenChange} = useDisclosure();
@@ -129,7 +130,7 @@ const Index = () => {
         }
     }
     return (
-        <PageAccess allowedRoles={['superadmin', 'admin', 'manager', 'staff']}>
+        <CheckPagePermission allowPermission={{ module: PERMISSION_MODULES.PURCHASES, action: 'create' }} >
             <SelectProductDrawr 
                 isOpen={isOpen}
                 onOpenChange={onOpenChange}
@@ -493,7 +494,7 @@ const Index = () => {
                     </div>
                 </div>
             </div>
-        </PageAccess>
+        </CheckPagePermission>
     )
 }
 

@@ -19,7 +19,7 @@ import CategoryAutocomplete from '@/components/dynamic/category/category-autocom
 import WarehouseAutocomplete from '@/components/dynamic/warehouse/warehouse-autocomplete-'
 import { Drawer, DrawerBody, DrawerContent, DrawerHeader } from '@heroui/drawer'
 
-const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubmit }) => {
+const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubmit }) => { // mode --> 'create' | 'edit'
    const {
       control,
       handleSubmit,
@@ -43,6 +43,7 @@ const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubm
       }
    })
 
+   // console.log(stockData)
 
    const watchedTags = watch('tags')
 
@@ -65,7 +66,7 @@ const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubm
   // Populate form when editing
    useEffect(() => {
       if (mode === 'edit' && stockData) {
-         console.log(stockData)
+         // console.log(stockData)
          reset({
             productName: stockData.productName || '',
             sku: stockData.sku || '',
@@ -203,12 +204,15 @@ const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubm
                         rules={{ required: 'Category is required' }}
                         render={({ field }) => (
                            <>
-                              {console.log(field.value)}
+                              {/* {console.log(field.value)} */}
                               <CategoryAutocomplete 
                                  onSelectChange={(value) => setValue('category', value)}
                                  variant='bordered'
                                  label="Category"
                                  isRequired
+                                 // defaultSelectedKey={field.value}
+                                 // key={field.value} 
+                                 
                                  defaultSelectedKey={field.value}
                                  key={field.value} 
                                  placeholder="Select or type to search category"
@@ -224,7 +228,7 @@ const StockModal = ({ isOpen, onClose, mode = 'create', stockData = null, onSubm
                         rules={{ required: 'Warehouse is required' }}
                         render={({ field }) => (
                            <>
-                              {field.value}
+                              {/* {field.value} */}
                               <WarehouseAutocomplete 
                                  onSelectChange={(value) => setValue('warehouse', value)}
                                  variant='bordered'
