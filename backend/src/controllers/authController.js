@@ -151,13 +151,17 @@ exports.login = async (req, res, next) => {
       }
     }
 
+    const cookieOptions = {
+      path: "/",
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      httpOnly: true,
+      secure: true, // production domain is HTTPS
+      sameSite: "none", // required for cross-site cookies
+      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined,
+    };
+    
     return res.status(200)
-      .cookie("inventory_management_token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-      })
+      .cookie("inventory_management_token", token,cookieOptions)
       .json({
         success: true,
         message: "Login successful",
