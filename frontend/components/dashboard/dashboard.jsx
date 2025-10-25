@@ -22,7 +22,7 @@ const Dashboard = () => {
     const hasCustomerPermission = useHasPermission(PERMISSION_MODULES.CUSTOMER, 'read')
 
     return (
-        <div className="p-4">
+        <div className="p-0">
             <div className="">
                 <h1 className="text-xl md:text-2xl font-bold mb-4 break-words">
                     Welcome back : {user?.data?.name}
@@ -30,37 +30,37 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <div className="lg:col-span-2 gap-4 md:gap-8 flex flex-col">
                         {hasSalePermission && (
-                            <DashboardRecentSales params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.SALES, 'read')}}/>
+                            <DashboardRecentSales params={{ months: 1 }} options={{ enabled: hasSalePermission }} />
                         )}
                         <Divider className="hidden lg:block" />
                         {hasStockPermission && (
-                            <DashboardLowStockProducts params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.STOCK, 'read')}} />
+                            <DashboardLowStockProducts params={{ months: 1 }} options={{ enabled: hasStockPermission }} />
                         )}
                         <Divider className="hidden lg:block" />
                         {hasPurchasePermission && (
-                            <DashPendingPurchaseOrders params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.PURCHASES, 'read')}} />
+                            <DashPendingPurchaseOrders params={{ months: 1 }} options={{ enabled: hasPurchasePermission }} />
                         )}
                     </div>
                     <div className="lg:col-span-1 gap-4 flex flex-col">
                         {hasSalePermission && (
                             <>
-                                <DashboardRevenueSummary params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.SALES, 'read')}} />
+                                <DashboardRevenueSummary params={{ months: 1 }} options={{ enabled: hasSalePermission }} />
                                 <Divider className="hidden lg:block" />
-                                <DashboardSalesSummary params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.SALES, 'read')}} />
+                                <DashboardSalesSummary params={{ months: 1 }} options={{ enabled: hasSalePermission }} />
                                 <Divider className="hidden lg:block" />
-                                <DashboardTopProducts params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.SALES, 'read')}} />
+                                <DashboardTopProducts params={{ months: 1 }} options={{ enabled: hasSalePermission }} />
                                 <Divider className="hidden lg:block" />
                             </>
                         )}
                         
                         {hasPurchasePermission &&  (
-                            <DashPurchaseOrderSummary params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.PURCHASES, 'read')}} />
+                            <DashPurchaseOrderSummary params={{ months: 1 }} options={{ enabled: hasPurchasePermission }} />
                         )}
                         
                         <Divider className="hidden lg:block" />
 
                         {hasCustomerPermission &&  (
-                            <DashTopCustomers params={{ months: 1 }} options={{ enabled: useHasPermission(PERMISSION_MODULES.CUSTOMER, 'read')}} />
+                            <DashTopCustomers params={{ months: 1 }} options={{ enabled: hasCustomerPermission }} />
                         )}
                     </div>
                 </div>

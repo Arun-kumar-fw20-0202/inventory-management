@@ -10,14 +10,18 @@ import { useFetchMyPermissions } from "@/libs/mutation/permission/permission-mut
 import { setPermissions } from "@/redux/slices/permission-slice";
 import { Spinner } from "@heroui/spinner";
 import { Button } from "@heroui/button";
+import { useHasPermission } from "@/libs/utils/check-permission";
+import { PERMISSION_MODULES } from "@/libs/utils";
 
 const AuthProvider = ({ children }) => {
    const dispatch = useDispatch();
    const { data: user, error, isLoading: loadingUser } = useMe();
 
+   const hasOrgReadPerm = useHasPermission(PERMISSION_MODULES.ORGANIZATION, 'read');
+
    // Always call hooks — React Query will handle `enabled: false`
    const userId = user?.data?.id;
-   const { data: organisation, isLoading: loadingOrg } = useFetchMyOrganisation({ enabled: !!userId });
+   const { data: organisation, isLoading: loadingOrg } = useFetchMyOrganisation({ enabled: hasOrgReadPerm && !!userId });
    const { data: perm, isLoading: loadingPerm } = useFetchMyPermissions({ enabled: !!userId });
 
    // Sync Redux

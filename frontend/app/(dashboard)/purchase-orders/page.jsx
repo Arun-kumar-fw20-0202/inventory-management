@@ -11,6 +11,7 @@ import { useHasPermission } from '@/libs/utils/check-permission'
 
 const PurchaseOrdersPage = () => {
   const router = useRouter()
+  const canCreate = useHasPermission(PERMISSION_MODULES.PURCHASES, 'create')
 
   return (
     <CheckPagePermission allowPermission={{ module: PERMISSION_MODULES.PURCHASES, action: 'read' }} >
@@ -23,7 +24,7 @@ const PurchaseOrdersPage = () => {
               <p className="text-gray-600 dark:text-gray-300">Manage purchase orders and procurement</p>
             </div>
           </div>
-          {useHasPermission(PERMISSION_MODULES.PURCHASES, 'create') && (
+          {canCreate && (
             <Button color="primary" startContent={<Plus className="w-4 h-4" />} onPress={() => router.push('/create-order')}>Create Purchase Order</Button>
           )}
         </div>

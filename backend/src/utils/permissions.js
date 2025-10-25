@@ -28,7 +28,7 @@ const adminPermission = {
 //     customer: { create: true, read: true, update: true, delete: true },
     
 //     reports: { create: true, read: true, update: true, delete: true },
-//     organization: { create: false, read: false, update: false, delete: false },
+//     organization: { create: false, read: true, update: false, delete: false },
 //     sessions: { create: false, read: false, update: false, delete: false },
 //     pricing: { create: false, read: false, update: false, delete: false },
 //     settings: { create: true, read: true, update: true, delete: true },
@@ -36,7 +36,7 @@ const adminPermission = {
 
 const managerPermission = {
     systemuser: { create: false, read: false, update: false, delete: false },
-    stock: { create: false, read: false, update: false, delete: false },
+    stock: { create: false, read: true, update: false, delete: false },
     sales: { create: true, read: true, update: true, delete: true , approve: false, reject: false, complete: false },
     purchases: { create: false, read: false, update: false, delete: false , approve: false, reject: false, complete: false, receive: false },
     reports: { create: false, read: true, update: false, delete: false },
@@ -44,9 +44,9 @@ const managerPermission = {
     category: { create: false, read: false, update: false, delete: false },
     warehouse: { create: false, read: false, update: false, delete: false },
     supplier: { create: false, read: false, update: false, delete: false },
-    customer: { create: false, read: false, update: false, delete: false },
+    customer: { create: false, read: true, update: false, delete: false },
     
-    organization: { create: false, read: false, update: false, delete: false },
+    organization: { create: false, read: true, update: false, delete: false },
     sessions: { create: false, read: false, update: false, delete: false },
     pricing: { create: false, read: false, update: false, delete: false },
     settings: { create: true, read: true, update: true, delete: true },
@@ -54,7 +54,7 @@ const managerPermission = {
 
 const staffPermission = {
     systemuser: { create: false, read: false, update: false, delete: false },
-    stock: { create: false, read: false, update: false, delete: false },
+    stock: { create: false, read: true, update: false, delete: false },
     sales: { create: true, read: true, update: true, delete: true , approve: false, reject: false, complete: false },
     purchases: { create: false, read: false, update: false, delete: false , approve: false, reject: false, complete: false, receive: false },
     reports: { create: false, read: true, update: false, delete: false },
@@ -62,9 +62,9 @@ const staffPermission = {
     category: { create: false, read: false, update: false, delete: false },
     warehouse: { create: false, read: false, update: false, delete: false },
     supplier: { create: false, read: false, update: false, delete: false },
-    customer: { create: false, read: false, update: false, delete: false },
+    customer: { create: false, read: true, update: false, delete: false },
     
-    organization: { create: false, read: false, update: false, delete: false },
+    organization: { create: false, read: true, update: false, delete: false },
     sessions: { create: false, read: false, update: false, delete: false },
     pricing: { create: false, read: false, update: false, delete: false },
     settings: { create: true, read: true, update: true, delete: true },

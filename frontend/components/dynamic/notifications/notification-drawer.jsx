@@ -147,8 +147,9 @@ export const NotificationDrawer = ({ isOpen, onOpenChange, count }) => {
     const [filter, setFilter] = React.useState({ page: 1, limit: 25, unread: false });
     const user = useSelector((state) => state.auth.user);
 
-    const { data, isLoading, refetch } = useFetchNotifications(filter, { enabled: !!isOpen })
-    const { data: unreadData, refetch: refetchUnread } = useFetchUnreadCount()
+    // const { data, isLoading, refetch } = useFetchNotifications(filter, { enabled: !!isOpen })
+    const { data, isLoading, refetch } = useFetchNotifications(filter, { enabled: false })
+    const { data: unreadData, refetch: refetchUnread } = useFetchUnreadCount({ enabled: false })
     const markRead = useMarkAsRead()
     const dismiss = useDismissNotification()
     const cache = useNotificationsCache()
