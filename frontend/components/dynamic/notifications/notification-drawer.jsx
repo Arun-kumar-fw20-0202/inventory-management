@@ -207,14 +207,29 @@ export const NotificationDrawer = ({ isOpen, onOpenChange, count }) => {
                 <DrawerContent>
                     {(onClose) => (
                         <>
-                            <DrawerHeader className="flex items-center justify-between">
+                            <div className="flex h-full w-full flex-col justify-center items-center">
+                                <div className="flex flex-col items-center justify-center py-12 px-8 text-center">
+                                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/20 flex items-center justify-center mb-6">
+                                        <Bell size={32} className="text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                                        Notifications
+                                    </h2>
+                                    <p className="text-lg text-gray-600 dark:text-gray-400 mb-2">
+                                        Coming Soon!
+                                    </p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-500 max-w-sm">
+                                        We're working hard to bring you a comprehensive notification system. Stay tuned for updates!
+                                    </p>
+                                </div>
+                            </div>
+                            {/* <DrawerHeader className="flex items-center justify-between">
                                 <div className="flex flex-col">
                                     <span className="font-semibold">Notifications</span>
                                     <span className="text-xs text-default-400">{unreadCount} unread</span>
                                 </div>
                                 <div className="flex gap-2 items-center">    
                                     <div className="flex gap-2 px-4 justify-end">
-                                        {/* read statu filter */}
                                         {['All', 'Unread'].map((status) => {
                                             const isActive =
                                                 (status === 'All' && !filter.unread) ||
@@ -240,10 +255,9 @@ export const NotificationDrawer = ({ isOpen, onOpenChange, count }) => {
                                         </Button>
                                     </div>
                                 </div>
-                            </DrawerHeader>
+                            </DrawerHeader> */}
 
-                            <DrawerBody className="p-0">
-                                {/* <div className="flex-1 overflow-y-auto"> */}
+                            {/* <DrawerBody className="p-0">
                                     {isLoading ? (
                                         <>
                                             {[...Array(5)].map((_, i) => (
@@ -266,14 +280,13 @@ export const NotificationDrawer = ({ isOpen, onOpenChange, count }) => {
                                             ))}
                                         </div>
                                     )}
-                                {/* </div> */}
                             </DrawerBody>
 
                             <DrawerFooter>
                                 <div className="w-full overflow-hidden flex justify-between">
                                     <Pagination color="primary" isCompact page={paginationData?.page} total={paginationData?.pages} onChange={(setPage) => setFilter(prev => ({ ...prev, page: setPage }))} showControls/>
                                 </div>
-                            </DrawerFooter>
+                            </DrawerFooter> */}
                         </>
                     )}
                 </DrawerContent>

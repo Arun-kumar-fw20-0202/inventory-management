@@ -13,18 +13,16 @@ import { Button } from "@heroui/button";
 
 const AuthProvider = ({ children }) => {
    const dispatch = useDispatch();
-   const { data: user, error, isLoading } = useMe();
-   const { data: organisation, isLoading: fetchingOrganisation } = useFetchMyOrganisation({
-      enabled: !!user?.data?.id
-   });
-   const { data: perm, isLoading: fetchingPermissions } = useFetchMyPermissions({
-      enabled: !!user?.data?.id
-   });
+   const { data: user, error, isLoading: loadingUser } = useMe();
 
+   // Always call hooks — React Query will handle `enabled: false`
+   const userId = user?.data?.id;
+   const { data: organisation, isLoading: loadingOrg } = useFetchMyOrganisation({ enabled: !!userId });
+   const { data: perm, isLoading: loadingPerm } = useFetchMyPermissions({ enabled: !!userId });
+
+   // Sync Redux
    useEffect(() => {
-      if (user?.data) {
-         dispatch(setUser(user));
-      }
+      if (user?.data) dispatch(setUser(user));
       if (organisation?.data?.organisation) {
          dispatch(setOrganisation({ organisation: organisation.data.organisation }));
       }
@@ -34,7 +32,7 @@ const AuthProvider = ({ children }) => {
    }, [user, organisation, perm, dispatch]);
 
    // Show loading state while any data is being fetched
-   if (isLoading || fetchingOrganisation || fetchingPermissions) {
+   if (loadingUser || loadingOrg || loadingPerm) {
       return <LoadingState />;
    }
 

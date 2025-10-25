@@ -96,7 +96,7 @@ export default function DashboardTopProducts({ params , options }) {
                             className={`relative p-4 rounded-xl border transition-all duration-200 hover:shadow-md ${
                                 isTopRank
                                     ? 'bg-warning/10 border-warning-200 hover:from-warning-100 hover:to-orange-100'
-                                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                                    : 'bg-default-50 border-default-200 hover:bg-default-100'
                             }`}
                         >
                             {/* Rank Badge */}
