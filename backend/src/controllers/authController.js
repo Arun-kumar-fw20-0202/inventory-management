@@ -223,10 +223,14 @@ exports.Logoutme = async (req, res, next) => {
         console.error('Failed to revoke session during logout:', e);
       }
     }
-
-    return res.status(200).cookie("inventory_management_token", "", 
-      { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: 'lax', expires: new Date(0) }
-    ).json({ success: true, message: "Logout successful" });
+    const cookieOptions = {
+        path: "/",
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+        domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined,
+      };
+    return res.status(200).clearCookie("inventory_management_token", cookieOptions).json({ success: true, message: "Logout successful" });
   } catch (err) {
     next(err);
   }
